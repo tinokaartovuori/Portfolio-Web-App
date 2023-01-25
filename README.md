@@ -18,6 +18,7 @@ Welcome to my personal portfolio site! This project was built using the followin
 - `npm run generate`: Generates a static version of the site for deployment
 - `npm run preview`: Runs the project in development mode and opens it in a browser
 - `npm run postinstall`: Runs automatically after installation to prepare the project for development
+- `npm run format`: Runs Prettier and formats all project files to correct style
 
 ## Usage
 
