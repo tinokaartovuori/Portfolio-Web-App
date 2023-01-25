@@ -5,6 +5,7 @@
 > Link for the site will be provided when the project is ready to share
 
 Welcome to my personal portfolio site! This project was built using the following technologies:
+
 - Nuxt.js 3: A framework for creating server-rendered Vue.js applications
 - TypeScript: A typed superset of JavaScript that adds optional static typing to the language
 - TailwindCSS: A utility-first CSS framework
@@ -32,4 +33,3 @@ Author
 This project was created by Tino Kaartovuori
 
 Enjoy!
-

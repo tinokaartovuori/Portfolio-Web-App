@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.2.0",
+    "nuxt": "^3.1.0",
+    "prettier": "2.8.3",
+    "three": "^0.148.0"
+  }
+}
