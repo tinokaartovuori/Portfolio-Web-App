@@ -1,17 +1,4 @@
 <template>
-  <div>
-    <h1 class="text-red-500">Tino.K.</h1>
-  </div>
+  <!-- TODO: Adding the three.js scene and also html structure -->
+  <div class="absolute h-full w-full bg-gray-900"></div>
 </template>
-
-<script lang="ts">
-import { defineComponent } from 'vue'
-
-export default defineComponent({
-  setup() {
-    return {}
-  },
-})
-</script>
-
-<style scoped></style>
