@@ -1,10 +1,12 @@
-# Tino.K. Portfolio Site
+# Portfolio Web App - Tino Kaartovuori
 
-> This project is in "Work in Progess" stage
+> This project is in "Work in Progess" state
 
-> Link for the site will be provided when the project is ready to share
+Link for the site will be provided when the project is ready to share
 
-Welcome to my personal portfolio site! This project was built using the following technologies:
+Welcome to my personal portfolio project!
+
+This project is built using the following technologies:
 
 - Nuxt.js 3: A framework for creating server-rendered Vue.js applications
 - TypeScript: A typed superset of JavaScript that adds optional static typing to the language
@@ -33,7 +35,7 @@ Then you can use the commands listed above to run the project in development mod
 
 ![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2022-01-26-portfolio-ui.gif)
 
-Added some nice sticky UI elements. Later behind these there will be a nice Three.js scene and on top of that there are scrollable HTML content. The scroll will be synced with Three.js scene and HTML content and it will make a very cool effect.
+Added some nice sticky UI elements. Three.js scene will be added as background later and on top of that there will be scrollable HTML content. The scroll will be synced between the Three.js scene and HTML content and it will make a very cool effect.
 
 Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These will have synced scroll behaivour
 
