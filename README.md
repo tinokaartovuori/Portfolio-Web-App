@@ -29,7 +29,7 @@ To run this project locally, clone the repository and install the dependencies b
 
 Then you can use the commands listed above to run the project in development mode or build it for production.
 
-## Progess so far
+## Progress so far
 
 #### 26.1.2023
 
