@@ -15,5 +15,9 @@
     "prettier-plugin-tailwindcss": "^0.2.2",
     "three": "^0.148.0",
     "vite-svg-loader": "^4.0.0"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^0.4.6",
+    "smooth-scrollbar": "^8.8.1"
   }
 }

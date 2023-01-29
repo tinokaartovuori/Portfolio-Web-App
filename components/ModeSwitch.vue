@@ -4,12 +4,12 @@
     :onIcon="SunIcon"
     :offIcon="MoonIcon"
     :colors="{
-      bgOff: 'bg-black',
-      bgOn: 'bg-white',
-      thumbOff: 'bg-white',
-      thumbOn: 'bg-black',
-      iconOff: 'fill-white',
-      iconOn: 'fill-black',
+      bgOff: 'bg-white',
+      bgOn: 'bg-black',
+      thumbOff: 'bg-black',
+      thumbOn: 'bg-white',
+      iconOff: 'fill-black',
+      iconOn: 'fill-white',
     }"
   />
 </template>
