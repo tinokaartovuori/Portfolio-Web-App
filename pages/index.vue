@@ -1,8 +1,11 @@
 <template>
-  <ScrollReader>
-    <div class="home-intro">
+  <ScrollObserver>
+    <div
+      class="home-intro absolute flex h-screen w-full"
+      :style="{ transform: 'translate3d(0px, ' + scrollY + 'px, 0px)' }"
+    >
       <div
-        class="index-intro_wrapper flex h-screen w-full items-center justify-center"
+        class="index-intro_wrapper absolute flex h-screen w-full items-center justify-center"
       >
         <div>
           <p class="text-3xl text-white md:text-4xl lg:text-5xl">
@@ -20,15 +23,14 @@
           </button>
         </div>
       </div>
-      <!-- For scroll testing -->
-      <div style="height: 3000px"></div>
     </div>
-  </ScrollReader>
+  </ScrollObserver>
 </template>
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useAppStateStore } from '~/store/appState'
+
 const appStateStore = useAppStateStore()
 const { scrollY } = storeToRefs(appStateStore)
 </script>

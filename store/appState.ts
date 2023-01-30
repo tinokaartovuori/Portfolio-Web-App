@@ -4,12 +4,9 @@ import { defineStore } from 'pinia'
 export const useAppStateStore = defineStore({
   id: 'app-state-store',
   state: () => {
+    // Here we could also store the window size
     return {
       scrollY: 0,
     }
-  },
-  actions: {},
-  getters: {
-    getScrollY: (state) => state.scrollY,
   },
 })
