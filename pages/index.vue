@@ -14,6 +14,10 @@
             pariatur placeat fugiat saepe illo nobis sapiente asperiores, totam
             dolore eos vel obcaecati!
           </p>
+          <WaveText
+            text="Another test text here!"
+            class="text-3xl text-white md:text-4xl lg:text-5xl"
+          /><br />
           <button class="mt-10 cursor-pointer">
             <!-- TODO: Make a nice custom animated link -->
             <span class="text-3xl text-white md:text-4xl lg:text-5xl">→ </span>

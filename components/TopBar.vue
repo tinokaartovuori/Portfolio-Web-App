@@ -4,13 +4,13 @@
   <Bar class="fixed top-16">
     <h1 class="mr-6 h-full">
       <a href="#" class="cursor-pointer">
-        <WaveText text="Tino Kaartovuori" />
+        <WaveText text="Tino Kaartovuori" class="text-white" onHover />
       </a>
     </h1>
     <div class="flex w-full justify-end">
       <div class="mr-6">
         <a href="#">
-          <WaveText text="About" />
+          <WaveText text="About" class="text-white" onHover />
         </a>
       </div>
       <div>
