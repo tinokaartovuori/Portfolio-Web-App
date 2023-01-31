@@ -8,7 +8,9 @@
         class="index-intro_wrapper absolute flex h-screen w-full items-center justify-center"
       >
         <div>
-          <p class="text-3xl text-white md:text-4xl lg:text-5xl">
+          <p
+            class="bg-slate-400/50 text-3xl text-black dark:bg-black/50 dark:text-white md:text-4xl lg:text-5xl"
+          >
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
             similique quas, autem possimus reprehenderit perspiciatis voluptatem
             pariatur placeat fugiat saepe illo nobis sapiente asperiores, totam
@@ -16,12 +18,16 @@
           </p>
           <WaveText
             text="Another test text here!"
-            class="text-3xl text-white md:text-4xl lg:text-5xl"
+            class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
           /><br />
           <button class="mt-10 cursor-pointer">
             <!-- TODO: Make a nice custom animated link -->
-            <span class="text-3xl text-white md:text-4xl lg:text-5xl">→ </span>
-            <span class="text-3xl text-white md:text-4xl lg:text-5xl"
+            <span
+              class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
+              >→
+            </span>
+            <span
+              class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
               >Test Button</span
             >
           </button>

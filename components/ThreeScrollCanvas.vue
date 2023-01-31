@@ -1,7 +1,7 @@
 <template>
   <canvas
     ref="canvas"
-    class="absolute top-0 left-0 block h-full w-full"
+    class="absolute top-0 left-0 block h-full w-full bg-white dark:bg-black"
   ></canvas>
 </template>
 
@@ -48,6 +48,5 @@ canvas {
   position: absolute;
   height: 100%;
   width: 100%;
-  background: black;
 }
 </style>

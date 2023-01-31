@@ -3,10 +3,17 @@ import svgLoader from 'vite-svg-loader'
 export default defineNuxtConfig({
   css: ['~/assets/styles/index.css'],
   components: true,
-  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxtjs/color-mode'],
+  colorMode: {
+    classSuffix: '',
+  },
   vite: {
     plugins: [
       svgLoader(), // https://github.com/jpkleemans/vite-svg-loader#readme
     ],
+  },
+  tailwindcss: {
+    viewer: true,
+    configPath: '~/tailwind.config.ts',
   },
 })

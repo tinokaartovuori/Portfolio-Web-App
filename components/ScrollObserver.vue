@@ -10,12 +10,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useAppStateStore } from '~/store/appState'
 import { storeToRefs } from 'pinia'
-import disableScroll from '../smooth-scrollbar-plugins/disableScroll'
-import Scrollbar from 'smooth-scrollbar'
-import type { Data2d } from 'smooth-scrollbar/interfaces'
 import gsap from 'gsap'
+
+import { useAppStateStore } from '~/store/appState'
+import Scrollbar from 'smooth-scrollbar'
+import disableScroll from '../smooth-scrollbar-plugins/disableScroll'
+import type { Data2d } from 'smooth-scrollbar/interfaces'
 
 const appStateStore = useAppStateStore()
 const { scrollY } = storeToRefs(appStateStore) // Pinia store value for scrollY

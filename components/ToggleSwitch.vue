@@ -1,4 +1,5 @@
-<!-- TODO: Here we need to implement the emit signal later -->
+<!-- FIXME: Here we need to reimplement this a little better -->
+<!-- We want the switch state to be correct at the start and only animate after change -->
 <template>
   <div
     class="z-10 flex h-8 w-16 cursor-pointer items-center rounded-full p-1 duration-300 ease-in-out"
@@ -63,12 +64,18 @@ const props = defineProps({
   },
 })
 
-const checked = ref<Boolean>(props.checked)
+const emits = defineEmits(['update:checked'])
 const colors = ref<Object>(props.colors)
+const checked = ref<Boolean>(props.checked)
 
 function toggle() {
   checked.value = !checked.value
+  emits('update:checked', checked.value)
 }
+
+onMounted(() => {
+  checked.value = props.checked
+})
 </script>
 
 <style scoped>

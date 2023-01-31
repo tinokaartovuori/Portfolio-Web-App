@@ -17,6 +17,7 @@
     "vite-svg-loader": "^4.0.0"
   },
   "dependencies": {
+    "@nuxtjs/color-mode": "^3.2.0",
     "@pinia/nuxt": "^0.4.6",
     "gsap": "^3.11.4",
     "smooth-scrollbar": "^8.8.1"
