@@ -1,6 +1,6 @@
 <template>
   <span
-    class="whitespace-nowrap"
+    class="whitespace-nowrap delay-[0ms] duration-[0ms]"
     @mouseenter="mouseIn = true"
     @mouseleave="mouseIn = false"
   >
@@ -38,7 +38,7 @@ const textDivs = ref<HTMLElement[]>([])
 
 const timeline = gsap.timeline({
   paused: true,
-  repeatDelay: 1,
+  // repeatDelay: 1,
   onComplete: () => {
     if (!props.onHover) return // if onHover is false
     if (mouseIn.value) {

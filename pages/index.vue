@@ -17,7 +17,7 @@
             dolore eos vel obcaecati!
           </p>
           <WaveText
-            text="Another test text here!"
+            text="Lorem ipsum dolor!"
             class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
           /><br />
           <button class="mt-10 cursor-pointer">
@@ -28,7 +28,7 @@
             </span>
             <span
               class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
-              >Test Button</span
+              >Lorem ipsum dolor</span
             >
           </button>
         </div>
