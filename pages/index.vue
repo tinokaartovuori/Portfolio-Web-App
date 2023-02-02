@@ -1,11 +1,8 @@
 <template>
-  <ScrollObserver>
-    <div
-      class="home-intro absolute flex h-screen w-full"
-      :style="{ transform: 'translate3d(0px, ' + scrollY + 'px, 0px)' }"
-    >
+  <ScrollContainer>
+    <div class="home-intro h-screen w-full">
       <div
-        class="index-intro_wrapper absolute flex h-screen w-full items-center justify-center"
+        class="index-intro_wrapper flex h-screen w-full items-center justify-center"
       >
         <div>
           <p
@@ -34,16 +31,16 @@
         </div>
       </div>
     </div>
-  </ScrollObserver>
+    <TestSection class="bg-white/50" />
+    <TestSection class="bg-red-500/50" />
+    <TestSection class="bg-green-500/50" />
+    <TestSection class="bg-blue-500/50" />
+    <TestSection class="bg-purple-500/50" />
+    <TestSection class="bg-yellow-500/50" />
+  </ScrollContainer>
 </template>
 
-<script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { useAppStateStore } from '~/store/appState'
-
-const appStateStore = useAppStateStore()
-const { scrollY } = storeToRefs(appStateStore)
-</script>
+<script setup lang="ts"></script>
 
 <style scoped>
 .index-intro_wrapper {
