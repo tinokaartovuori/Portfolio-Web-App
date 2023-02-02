@@ -1,6 +1,6 @@
 <template>
-  <div class="row flex w-full justify-center">
-    <div class="flex w-5/6 justify-end">
+  <div class="row flex w-full justify-center align-middle">
+    <div class="flex w-5/6 justify-end align-middle">
       <slot></slot>
     </div>
   </div>

@@ -3,7 +3,12 @@ import svgLoader from 'vite-svg-loader'
 export default defineNuxtConfig({
   css: ['~/assets/styles/index.css'],
   components: true,
-  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxtjs/color-mode'],
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@pinia/nuxt',
+    '@nuxtjs/color-mode',
+    '@nuxtjs/google-fonts',
+  ],
   colorMode: {
     classSuffix: '',
   },
@@ -15,5 +20,15 @@ export default defineNuxtConfig({
   tailwindcss: {
     viewer: true,
     configPath: '~/tailwind.config.ts',
+  },
+  googleFonts: {
+    display: 'swap',
+    download: true,
+    outputDir: './assets/fonts',
+    overwriting: false,
+    inject: true,
+    families: {
+      Outfit: [200, 300, 400, 500, 600, 700, 800],
+    },
   },
 })
