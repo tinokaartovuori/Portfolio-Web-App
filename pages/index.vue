@@ -4,27 +4,26 @@
       <div
         class="index-intro_wrapper flex h-screen w-full items-center justify-center"
       >
-        <div>
+        <div class="-mt-[5vh]">
           <p
-            class="bg-slate-400/50 text-3xl text-black dark:bg-black/50 dark:text-white md:text-4xl lg:text-5xl"
+            class="xxs:text-xl bg-slate-400/50 text-lg text-black dark:bg-black/50 dark:text-white sm:text-2xl md:text-4xl lg:text-5xl"
           >
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
             similique quas, autem possimus reprehenderit perspiciatis voluptatem
-            pariatur placeat fugiat saepe illo nobis sapiente asperiores, totam
-            dolore eos vel obcaecati!
+            pariatur placeat fugiat saepe illo nobis sapiente asperiores!
           </p>
           <WaveText
             text="Lorem ipsum dolor!"
-            class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
+            class="xxs:text-xl text-lg text-black dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
           /><br />
           <button class="mt-10 cursor-pointer">
             <!-- TODO: Make a nice custom animated link -->
             <span
-              class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
+              class="xxs:text-xl text-lg text-black dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
               >→
             </span>
             <span
-              class="text-3xl text-black dark:text-white md:text-4xl lg:text-5xl"
+              class="xxs:text-xl text-lg text-black dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
               >Lorem ipsum dolor</span
             >
           </button>

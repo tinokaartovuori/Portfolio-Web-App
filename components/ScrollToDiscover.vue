@@ -1,8 +1,15 @@
 <template>
   <!-- TODO: Here we need to add the press event that starts scrolling the page -->
   <div class="flex">
-    <WaveText text="Scroll to discover" class="text-black dark:text-white" />
-    <div class="up-and-down px-2 text-2xl text-black dark:text-white">↓</div>
+    <WaveText
+      text="Scroll to discover"
+      class="xs:text-base text-sm font-light text-black dark:text-white sm:text-xl md:text-2xl"
+    />
+    <div
+      class="up-and-down xs:text-base px-2 text-sm font-light text-black dark:text-white sm:text-xl md:text-2xl"
+    >
+      ↓
+    </div>
   </div>
 </template>
 

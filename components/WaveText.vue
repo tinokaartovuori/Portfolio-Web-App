@@ -8,7 +8,7 @@
       v-for="(letter, index) in props.text"
       ref="textDivs"
       :key="letter"
-      class="relative inline-block text-xl md:text-2xl"
+      class="relative inline-block"
     >
       {{ letter != ' ' ? letter : '&nbsp;' }}
     </div>
