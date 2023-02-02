@@ -22,11 +22,12 @@ export default defineNuxtConfig({
     configPath: '~/tailwind.config.ts',
   },
   googleFonts: {
-    display: 'swap',
     download: true,
+    preload: true,
     outputDir: './assets/fonts',
     overwriting: false,
     inject: true,
+    base64: true,
     families: {
       Outfit: [200, 300, 400, 500, 600, 700, 800],
     },
