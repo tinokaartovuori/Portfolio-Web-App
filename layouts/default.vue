@@ -4,7 +4,9 @@
       <header>
         <TopBar class="z-50" />
       </header>
-      <ThreeScrollCanvas />
+      <ClientOnly>
+        <ThreeScrollCanvas />
+      </ClientOnly>
       <!-- TODO: <Preloader /> -->
       <slot />
       <!-- BottomBar will be replaced with different component later and moved to child elements -->

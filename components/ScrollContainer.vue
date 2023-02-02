@@ -15,6 +15,7 @@ import { storeToRefs } from 'pinia'
 import { useAppStateStore } from '~/store/appState'
 import Scrollbar from 'smooth-scrollbar'
 import OverscrollPlugin from 'smooth-scrollbar/plugins/overscroll'
+import SpeedControlPlugin from '../smooth-scrollbar-plugins/speedControl'
 import type { Data2d } from 'smooth-scrollbar/interfaces'
 
 const appStateStore = useAppStateStore()
@@ -28,6 +29,7 @@ const scrollYWithoutOverscroll = ref<number>(0)
 onMounted(() => {
   /* Initializing the scrollbar */
   Scrollbar.use(OverscrollPlugin)
+  Scrollbar.use(SpeedControlPlugin)
   if (!scrollElement.value) return
   scrollBar.value = Scrollbar.init(scrollElement.value, {
     continuousScrolling: false,
@@ -41,8 +43,12 @@ onMounted(() => {
           scrollY.value = overscroll.y + scrollYWithoutOverscroll.value
         },
         effect: 'bounce',
-        damping: 0.1,
-        maxOverscroll: 600,
+        damping: 0.05,
+        maxOverscroll: 1200,
+      },
+      speedControl: {
+        speed: 2,
+        maxSpeed: 1200,
       },
     },
   })
