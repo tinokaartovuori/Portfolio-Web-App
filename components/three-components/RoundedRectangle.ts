@@ -50,6 +50,13 @@ export class RoundedRectangle extends Object3D {
 
   createShape() {
     const shape = new Shape()
+    if (this.width < 667) {
+      this.cornerRadius = 15
+      this.padding = 15
+    } else {
+      this.cornerRadius = 25
+      this.padding = 25
+    }
     shape.moveTo(
       -(this.width / 2) + this.padding + this.cornerRadius,
       this.height / 2 - this.padding,

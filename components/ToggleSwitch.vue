@@ -1,39 +1,48 @@
-<!-- FIXME: Here we need to reimplement this a little better -->
-<!-- We want the switch state to be correct at the start and only animate after change -->
 <template>
   <div
-    class="z-10 flex h-8 w-16 cursor-pointer items-center rounded-full p-1 duration-300 ease-in-out"
+    ref="backgroundElement"
+    class="z-10 flex h-8 w-16 cursor-pointer items-center rounded-full p-1 transition-none"
     :aria-checked="checked"
-    :class="checked ? colors.bgOn : colors.bgOff"
     @click="toggle"
   >
     <div
-      class="fixed z-10 h-6 w-6 transform rounded-full duration-300 ease-in-out"
-      :class="checked ? colors.thumbOn : colors.thumbOff, checked ? 'translate-x-8' : 'translate-x-0'"
+      ref="handleElement"
+      class="absolute z-10 h-6 w-6 transform rounded-full transition-none"
     ></div>
-    <!-- Show only when there is icons object with on and off keys -->
-    <div
-      class="fixed ml-8 h-6 w-6 transform transition-transform duration-300 ease-in-out"
-      :class="checked ? '-translate-x-8' : 'translate-x-0'"
-    >
-      <component
-        :is="onIcon"
-        name="on"
-        class="icon-animation absolute bg-transparent"
-        :class="colors.iconOn, checked ? '!opacity-100' : '!opacity-0'"
-      />
-      <component
-        :is="offIcon"
-        name="off"
-        class="icon-animation absolute bg-transparent"
-        :class="colors.iconOff, checked ? '!opacity-0' : '!opacity-100'"
-      />
+    <div ref="iconElement" class="fixed h-6 w-6 transition-none duration-[0]">
+      <div
+        v-if="onIcon"
+        ref="onIconElement"
+        class="absolute bg-transparent transition-none duration-[0]"
+        :style="`fill: ${colors.iconOn}; opacity: 0;`"
+      >
+        <component :is="onIcon" name="on" />
+      </div>
+      <div
+        v-if="offIcon"
+        ref="offIconElement"
+        class="absolute bg-transparent transition-none duration-[0]"
+        :style="`fill: ${colors.iconOff}; opacity: 0;`"
+      >
+        <component :is="offIcon" name="off" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { PropType, ref } from 'vue'
+import { gsap } from 'gsap'
+
+// Make an interface for Colors object
+interface Colors {
+  bgOff: string
+  bgOn: string
+  thumbOff: string
+  thumbOn: string
+  iconOn: string
+  iconOff: string
+}
 
 const props = defineProps({
   checked: {
@@ -51,37 +60,182 @@ const props = defineProps({
   },
   colors: {
     // Object containing {key, tailwind -class}
-    type: Object,
+    type: Object as PropType<Colors>,
     required: false,
     default: {
-      bgOff: 'bg-red-600',
-      bgOn: 'bg-green-600',
-      thumbOff: 'bg-white',
-      thumbOn: 'bg-white',
-      iconOn: 'fill-white',
-      iconOff: 'fill-white',
+      bgOff: '#DC2626',
+      bgOn: '#059669',
+      thumbOff: '#FFFFFF',
+      thumbOn: '#FFFFFF',
+      iconOn: '#FFFFFF',
+      iconOff: '#FFFFFF',
     },
+  },
+  fadeIn: {
+    type: Boolean,
+    required: false,
+    default: false,
   },
 })
 
+const backgroundElement = ref<HTMLElement | null>(null)
+const handleElement = ref<HTMLElement | null>(null)
+const iconElement = ref<HTMLElement | null>(null)
+const onIconElement = ref<HTMLElement | null>(null)
+const offIconElement = ref<HTMLElement | null>(null)
+
 const emits = defineEmits(['update:checked'])
-const colors = ref<Object>(props.colors)
+const colors = ref<Colors>(props.colors)
 const checked = ref<Boolean>(props.checked)
+
+const timeline = gsap.timeline()
 
 function toggle() {
   checked.value = !checked.value
+  if (checked.value) {
+    useOn(0.5)
+  } else {
+    useOff(0.5)
+  }
   emits('update:checked', checked.value)
+}
+
+function useOn(duration: number) {
+  timeline.clear()
+  timeline.to(
+    backgroundElement.value,
+    {
+      duration: duration,
+      backgroundColor: colors.value.bgOn,
+      opacity: 1,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  timeline.to(
+    handleElement.value,
+    {
+      duration: duration,
+      x: 32,
+      backgroundColor: colors.value.thumbOn,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  timeline.to(
+    iconElement.value,
+    {
+      duration: duration,
+      x: 0,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  if (onIconElement.value) {
+    timeline.to(
+      onIconElement.value,
+      {
+        duration: duration,
+        opacity: 1,
+        ease: 'power1.inOut',
+      },
+      0,
+    )
+  }
+  if (offIconElement.value) {
+    timeline.to(
+      offIconElement.value,
+      {
+        duration: duration / 2,
+        opacity: 0,
+        ease: 'power1.inOut',
+      },
+      0,
+    )
+  }
+  timeline.play(0)
+}
+
+function useOff(duration: number) {
+  timeline.clear()
+  timeline.to(
+    backgroundElement.value,
+    {
+      duration: duration,
+      backgroundColor: colors.value.bgOff,
+      opacity: 1,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  timeline.to(
+    handleElement.value,
+    {
+      duration: duration,
+      x: 0,
+      backgroundColor: colors.value.thumbOff,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  timeline.to(
+    iconElement.value,
+    {
+      duration: duration,
+      x: 32,
+      fill: colors.value.iconOff,
+      ease: 'power1.inOut',
+    },
+    0,
+  )
+  if (onIconElement.value) {
+    timeline.to(
+      onIconElement.value,
+      {
+        duration: duration / 2,
+        opacity: 0,
+        ease: 'power1.inOut',
+      },
+      0,
+    )
+  }
+  if (offIconElement.value) {
+    timeline.to(
+      offIconElement.value,
+      {
+        duration: duration,
+        opacity: 1,
+        ease: 'power1.inOut',
+      },
+      0,
+    )
+  }
+  timeline.play(0)
+}
+
+function startFadeIn() {
+  timeline.clear()
+  timeline.to(backgroundElement.value, {
+    duration: 0,
+    opacity: 0,
+    ease: 'power1.inOut',
+  })
+  timeline.to(backgroundElement.value, {
+    duration: 0.8,
+    opacity: 1,
+    ease: 'power1.inOut',
+  })
+  timeline.play(0)
 }
 
 onMounted(() => {
   checked.value = props.checked
+  if (checked.value) {
+    useOn(0)
+  } else {
+    useOff(0)
+  }
+  if (!props.fadeIn) return
+  startFadeIn()
 })
 </script>
-
-<style scoped>
-.icon-animation {
-  transition: opacity 0s;
-  opacity: 0;
-  transition-delay: 100ms;
-}
-</style>

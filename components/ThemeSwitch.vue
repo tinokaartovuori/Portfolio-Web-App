@@ -4,14 +4,15 @@
     :onIcon="SunIcon"
     :offIcon="MoonIcon"
     :colors="{
-      bgOff: 'bg-white',
-      bgOn: 'bg-black',
-      thumbOff: 'bg-black',
-      thumbOn: 'bg-white',
-      iconOff: 'fill-black',
-      iconOn: 'fill-white',
+      bgOff: '#FFFFFF',
+      bgOn: '#111111',
+      thumbOff: '#111111',
+      thumbOn: '#FFFFFF',
+      iconOff: '#111111',
+      iconOn: '#FFFFFF',
     }"
     :checked="isLight"
+    fadeIn
     @update:checked="toggleTheme"
   />
 </template>

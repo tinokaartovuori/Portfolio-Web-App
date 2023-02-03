@@ -12,7 +12,9 @@ export default <Partial<Config>>{
       xl: '1280px',
     },
     extend: {
-      colors: {},
+      colors: {
+        onyx: '#111111',
+      },
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],
         outfit: ['Outfit', 'sans-serif'],

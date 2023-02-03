@@ -47,7 +47,7 @@ onMounted(() => {
         maxOverscroll: 1200,
       },
       speedControl: {
-        speed: 2,
+        speed: 1,
         maxSpeed: 1200,
       },
     },

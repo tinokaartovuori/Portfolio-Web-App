@@ -2,7 +2,7 @@
   <div>
     <canvas
       ref="threeCanvas"
-      class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black"
+      class="dark:bg-onyx absolute top-0 bottom-0 left-0 right-0 bg-white"
     />
   </div>
 </template>
