@@ -36,6 +36,7 @@ Then you can use the commands listed above to run the project in development mod
   </br>
 
 ![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-01-26-portfolio-ui.gif)
+![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-01-26-portfolio-ui.gif)
 
 Added some nice sticky UI elements. Three.js scene will be added as background later and on top of that there will be scrollable HTML content. The scroll will be synced between the Three.js scene and HTML content and it will make a very cool effect.
 
