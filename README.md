@@ -35,7 +35,7 @@ Then you can use the commands listed above to run the project in development mod
   <summary>26.1.2023</summary>
   </br>
 
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2022-01-26-portfolio-ui.gif)
+![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-01-26-portfolio-ui.gif)
 
 Added some nice sticky UI elements. Three.js scene will be added as background later and on top of that there will be scrollable HTML content. The scroll will be synced between the Three.js scene and HTML content and it will make a very cool effect.
 
@@ -47,8 +47,7 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
   <summary>1.2.2023</summary>
   </br>
 
-
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2022-02-01-portfolio-ui.gif)
+![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-01-portfolio-ui.gif)
 
 - [x] Implemented dark and light mode (`TailwindCSS` and `@nuxtjs/color-mode`)
 - [x] Added test canvas
@@ -57,12 +56,27 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
 
 </details>
 
+<details>
+  <summary>1.2.2023</summary>
+  </br>
+
+![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-04-portfolio-ui.gif)
+
+- [x] Replaced the previous canvas with Three.js version and made a prototype rounded rectangle in the scene that moves with the scroll
+- [x] Made a fun custom scrollbar track
+- [x] More responsive design
+- [x] fix: Reimplemented toggle switch with gsap
+
+</details>
+
 ## Other
 
 ### License
+
 This project is licensed under the MIT license. Please see the LICENSE file for more information.
 
 ### Author
+
 This project was created by Tino Kaartovuori
 
 Enjoy!
