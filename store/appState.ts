@@ -7,6 +7,7 @@ export const useAppStateStore = defineStore({
     // Here we could also store the window size
     return {
       scrollY: 0 as number,
+      scrollYMax: 0 as number,
     }
   },
 })

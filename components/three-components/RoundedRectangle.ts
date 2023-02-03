@@ -43,7 +43,11 @@ export class RoundedRectangle extends Object3D {
       bevelEnabled: false,
     }
     this.geometry = new ExtrudeGeometry(shape, extrudeSettings)
-    this.material = new MeshBasicMaterial({ color: 0x465d61 })
+    this.material = new MeshBasicMaterial({
+      color: 0xd152c4,
+      transparent: true,
+      opacity: 0.5,
+    })
     this.mesh = new Mesh(this.geometry, this.material)
     this.add(this.mesh)
   }

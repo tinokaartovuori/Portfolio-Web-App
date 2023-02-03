@@ -23,7 +23,7 @@ const scrollElement = ref<HTMLElement | null>(null)
 const scrollBar = ref<Scrollbar | null>(null)
 
 // Scroll position related stuff
-const { scrollY } = storeToRefs(appStateStore) // Pinia store value for scrollY
+const { scrollY, scrollYMax } = storeToRefs(appStateStore) // Pinia store value for scrollY
 const scrollYWithoutOverscroll = ref<number>(0)
 
 onMounted(() => {
@@ -56,9 +56,19 @@ onMounted(() => {
   scrollBar.value.track.xAxis.element.remove()
   scrollBar.value.track.yAxis.element.remove()
 
-  scrollBar.value.addListener(({ offset }) => {
+  scrollBar.value.addListener(({ offset, limit }) => {
     scrollYWithoutOverscroll.value = offset.y
     scrollY.value = offset.y
+    scrollYMax.value = limit.y
   })
+
+  // Update scrollYMax when child content height changes
+  const scrollContent = scrollElement.value.children[0] as HTMLElement
+  const resizeObserver = new ResizeObserver(() => {
+    if (!scrollElement.value) return
+    scrollYMax.value =
+      scrollContent.clientHeight - scrollElement.value.clientHeight
+  })
+  resizeObserver.observe(scrollContent)
 })
 </script>

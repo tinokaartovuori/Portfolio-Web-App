@@ -11,7 +11,7 @@
       <slot />
       <!-- BottomBar will be replaced with different component later and moved to child elements -->
       <BottomBar class="z-50" />
-      <!-- TODO: <ScrollBar /> -->
+      <ScrollTrack />
     </div>
   </main>
 </template>
