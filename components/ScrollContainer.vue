@@ -23,7 +23,7 @@ const scrollElement = ref<HTMLElement | null>(null)
 const scrollBar = ref<Scrollbar | null>(null)
 
 // Scroll position related stuff
-const { scrollY, scrollYMax } = storeToRefs(appStateStore) // Pinia store value for scrollY
+const { scrollY, scrollYMax } = storeToRefs(appStateStore) // Pinia store
 const scrollYWithoutOverscroll = ref<number>(0)
 
 onMounted(() => {

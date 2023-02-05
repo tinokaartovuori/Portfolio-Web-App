@@ -6,7 +6,7 @@
       >
         <div class="-mt-[5vh]">
           <p
-            class="xxs:text-xl text-onyx dark:bg-onyx/50 bg-slate-400/50 text-lg dark:text-white sm:text-2xl md:text-4xl lg:text-5xl"
+            class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-4xl lg:text-5xl"
           >
             Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
             similique quas, autem possimus reprehenderit perspiciatis voluptatem

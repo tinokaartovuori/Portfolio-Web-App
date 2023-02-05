@@ -17,13 +17,20 @@
   />
 </template>
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { useAppStateStore } from '~/store/appState'
 import SunIcon from '../assets/icons/sun.svg?component'
 import MoonIcon from '../assets/icons/moon.svg?component'
 
-const colorMode = useColorMode()
-const isLight = ref<boolean>(colorMode.preference === 'light')
+const appStateStore = useAppStateStore()
+const { colorMode } = storeToRefs(appStateStore)
+
+const colorModeInstance = useColorMode()
+colorMode.value = colorModeInstance.preference as 'light' | 'dark'
+const isLight = ref<boolean>(colorModeInstance.preference === 'light')
 
 function toggleTheme(value: boolean) {
-  colorMode.preference = value ? 'light' : 'dark'
+  colorModeInstance.preference = value ? 'light' : 'dark'
+  colorMode.value = value ? 'light' : 'dark'
 }
 </script>
