@@ -22,7 +22,7 @@ export default class Scenario {
       1,
       1000,
     )
-    this.camera.position.z = 100
+    this.camera.position.z = 500
 
     this.renderer = new WebGLRenderer({
       canvas,

@@ -9,6 +9,7 @@ export const useAppStateStore = defineStore({
       colorMode: 'dark' as 'dark' | 'light',
       scrollY: 0 as number,
       scrollYMax: 0 as number,
+      domElementTracker: {} as Record<string, HTMLElement>,
     }
   },
 })

@@ -1,37 +1,47 @@
 <template>
   <ScrollContainer>
-    <div class="home-intro h-screen w-full">
-      <div
-        class="index-intro_wrapper flex h-screen w-full items-center justify-center"
-      >
-        <div class="-mt-[5vh]">
-          <p
-            class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-4xl lg:text-5xl"
-          >
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
-            similique quas, autem possimus reprehenderit perspiciatis voluptatem
-            pariatur placeat fugiat saepe illo nobis sapiente asperiores!
-          </p>
-          <WaveText
-            text="Lorem ipsum dolor!"
-            class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
-          /><br />
-          <button class="mt-10 cursor-pointer">
-            <!-- TODO: Make a nice custom animated link -->
-            <span
-              class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
-              >→
-            </span>
-            <span
-              class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
-              >Lorem ipsum dolor</span
+    <ElementTracker threeReference="homeIntro">
+      <div class="home-intro h-screen w-full">
+        <div
+          class="index-intro_wrapper flex h-screen w-full items-center justify-center"
+        >
+          <div class="-mt-[5vh]">
+            <p
+              class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-4xl lg:text-5xl"
             >
-          </button>
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
+              similique quas, autem possimus reprehenderit perspiciatis
+              voluptatem pariatur placeat fugiat saepe illo nobis sapiente
+              asperiores!
+            </p>
+            <WaveText
+              text="Lorem ipsum dolor!"
+              class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
+            /><br />
+            <button class="mt-10 cursor-pointer">
+              <!-- TODO: Make a nice custom animated link -->
+              <span
+                class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
+                >→
+              </span>
+              <span
+                class="xxs:text-xl text-onyx text-lg dark:text-white sm:text-2xl md:text-3xl lg:text-4xl"
+                >Lorem ipsum dolor</span
+              >
+            </button>
+          </div>
         </div>
       </div>
+    </ElementTracker>
+    <TestSection id="test-section1" class="bg-white/50" />
+    <div class="grid grid-cols-4 h-[20vw]">
+      <div class="bg-green-400/20"></div>
+      <div class="bg-blue-400/20"></div>
+      <ElementTracker threeReference="testSection2">
+        <div class="bg-purple-400/20 w-full h-full"></div>
+      </ElementTracker>
+      <div class="bg-red-400/20"></div>
     </div>
-    <TestSection class="bg-white/50" />
-    <TestSection class="bg-red-500/50" />
     <TestSection class="bg-green-500/50" />
     <TestSection class="bg-blue-500/50" />
     <TestSection class="bg-purple-500/50" />
@@ -39,7 +49,9 @@
   </ScrollContainer>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import ElementTracker from '../components/ElementTracker.vue'
+</script>
 
 <style scoped>
 .index-intro_wrapper {
