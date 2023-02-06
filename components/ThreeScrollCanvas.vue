@@ -14,7 +14,7 @@ import { storeToRefs } from 'pinia'
 
 import { useAppStateStore } from '~/store/appState'
 import { useWindowSize } from '@vueuse/core'
-import { RoundedRectangleShape } from './three-components/RoundedRectangleShape'
+import { IntroRectangle } from './three-components/IntroRectangle'
 
 const appStateStore = useAppStateStore()
 const { scrollY } = storeToRefs(appStateStore) // Pinia store value for scrollY
@@ -22,29 +22,18 @@ const { scrollY } = storeToRefs(appStateStore) // Pinia store value for scrollY
 const { width, height } = useWindowSize()
 const aspectRatio = computed(() => width.value / height.value)
 const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
+
+// Scenario: a scene, a camera and a renderer
 let scenario: Scenario
 
-const roundedRectShape = new RoundedRectangleShape(
-  0,
-  0,
-  width.value - 50,
-  height.value - 50,
-  25,
-)
-const roundedRectGeometry = new ShapeGeometry(roundedRectShape)
-const roundedRectMaterial = new MeshBasicMaterial({
-  color: 0x444444,
-  // wireframe: true,
-})
-const roundedRect = new Mesh(roundedRectGeometry, roundedRectMaterial)
+const roundedRect = new IntroRectangle(0, 0, width.value, height.value)
 
 onMounted(() => {
   if (!threeCanvas.value) return
 
-  // Create a new scenario (scene, camera, renderer)
   scenario = new Scenario(threeCanvas.value)
 
-  // Adding the stuff to the scene
+  // Adding stuff to the scene
   scenario.scene.add(roundedRect)
 
   loop() // Start the animation loop
@@ -52,6 +41,9 @@ onMounted(() => {
 
 watch(aspectRatio, () => {
   if (!threeCanvas.value) return
+
+  roundedRect.updateShape(width.value, height.value)
+
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)
 })
