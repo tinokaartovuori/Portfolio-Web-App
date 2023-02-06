@@ -5,17 +5,13 @@ export class IntroRectangle extends Object3D {
   mesh: Mesh | undefined
   geometry: ShapeGeometry | undefined
   material: MeshBasicMaterial | undefined
-  x: number
-  y: number
   windowWidth: number
   windowHeight: number
   padding: number
   cornerRadius: number
 
-  constructor(x: number, y: number, windowWidth: number, windowHeight: number) {
+  constructor(windowWidth: number, windowHeight: number) {
     super()
-    this.x = x
-    this.y = y
     this.windowWidth = windowWidth
     this.windowHeight = windowHeight
 

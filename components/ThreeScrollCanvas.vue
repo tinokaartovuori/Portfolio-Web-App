@@ -26,7 +26,7 @@ const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
 // Scenario: a scene, a camera and a renderer
 let scenario: Scenario
 
-const roundedRect = new IntroRectangle(0, 0, width.value, height.value)
+const roundedRect = new IntroRectangle(width.value, height.value)
 
 onMounted(() => {
   if (!threeCanvas.value) return
