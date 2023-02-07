@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute top-0 bottom-0 left-0 right-0 dark:bg-onyx bg-white">
+  <div class="dark:bg-onyx bg-platinum absolute top-0 bottom-0 left-0 right-0">
     <canvas ref="threeCanvas" class="absolute top-0 bottom-0 left-0 right-0" />
   </div>
 </template>
@@ -10,6 +10,7 @@ import { SphereGeometry, MeshBasicMaterial, Mesh } from 'three'
 
 import Scenario from './three-components/Scenario'
 import ThreeDomSyncer from './three-components/ThreeDomSyncer'
+import WavyImage from './three-components/WavyImage'
 
 import { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -19,7 +20,8 @@ import { useWindowSize } from '@vueuse/core'
 import { IntroRectangle } from './three-components/IntroRectangle'
 
 const appStateStore = useAppStateStore()
-const { domElementTracker } = storeToRefs(appStateStore) // Pinia store value for scrollY
+const { domElementTracker, threeImageTracker, scrollYSpeed, scrollY } =
+  storeToRefs(appStateStore)
 
 const { width, height } = useWindowSize()
 const aspectRatio = computed(() => width.value / height.value)
@@ -27,6 +29,8 @@ const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
 
 // Scenario: a scene, a camera and a renderer
 let scenario: Scenario
+
+let wavyImages = [] as WavyImage[]
 
 // Intro Rectangle
 const introRectangle = new IntroRectangle(width.value, height.value)
@@ -58,6 +62,14 @@ onMounted(() => {
 
   scenario = new Scenario(threeCanvas.value)
 
+  // Creating image meshes
+  for (const [key, imageElement] of Object.entries(threeImageTracker.value)) {
+    const wavyImage = new WavyImage(imageElement as HTMLImageElement)
+    wavyImages.push(wavyImage)
+    scenario.scene.add(wavyImage)
+    wavyImage.update(scrollYSpeed.value)
+  }
+
   // Adding stuff to the scene
   scenario.scene.add(introRectangle)
   scenario.scene.add(sphere)
@@ -69,14 +81,18 @@ watch(aspectRatio, () => {
   if (!threeCanvas.value) return
 
   introRectangle.updateShape(width.value, height.value)
+  wavyImages.forEach((image) => image.update(scrollYSpeed.value))
 
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)
 })
 
+watch(scrollY, () => {
+  wavyImages.forEach((image) => image.update(scrollYSpeed.value))
+})
+
 const loop = () => {
   requestAnimationFrame(loop)
-
   // Syncing the introRectangle with the domElementTracker
   introRectangleSyncer.sync()
   sphereSyncer.sync()

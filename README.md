@@ -69,6 +69,21 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
 
 </details>
 
+<details>
+  <summary>7.2.2023</summary>
+  </br>
+
+![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-07-portfolio-ui.gif)
+
+- [x] Replaced orthographic camera with a perspective one
+- [x] Refactored Three.js scene, camera and renderer to one scenario object
+- [x] Made prototype components that enable mapping Three.js object positions to the HTML element positions
+- [x] ^ Mapped some test images and objects to HTML elements
+- [x] Tested some shaders to make images react to scrolling
+- [x] Added some a few new colors
+
+</details>
+
 ## Other
 
 ### License

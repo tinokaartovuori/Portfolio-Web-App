@@ -8,8 +8,10 @@ export const useAppStateStore = defineStore({
     return {
       colorMode: 'dark' as 'dark' | 'light',
       scrollY: 0 as number,
+      scrollYSpeed: 0 as number,
       scrollYMax: 0 as number,
       domElementTracker: {} as Record<string, HTMLElement>,
+      threeImageTracker: {} as Record<string, HTMLImageElement>,
     }
   },
 })

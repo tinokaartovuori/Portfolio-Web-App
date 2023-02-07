@@ -13,7 +13,8 @@ export default <Partial<Config>>{
     },
     extend: {
       colors: {
-        onyx: '#111111',
+        onyx: '#0c0d12',
+        platinum: '#dde0ed',
       },
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],

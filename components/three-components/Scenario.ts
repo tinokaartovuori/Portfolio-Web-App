@@ -1,8 +1,11 @@
-import { Scene, OrthographicCamera, WebGLRenderer, Clock, Color } from 'three'
+import { Scene, WebGLRenderer, Clock, Color, PerspectiveCamera } from 'three'
 
 export default class Scenario {
   scene: Scene
-  camera: OrthographicCamera
+  camera: PerspectiveCamera
+  perspective: number
+  fov: number
+  aspectRatio: number
   renderer: WebGLRenderer
   clock: Clock
 
@@ -14,15 +17,12 @@ export default class Scenario {
     this.height = window.innerHeight
 
     this.scene = new Scene()
-    this.camera = new OrthographicCamera(
-      -this.width / 2,
-      this.width / 2,
-      this.height / 2,
-      -this.height / 2,
-      1,
-      1000,
-    )
-    this.camera.position.z = 500
+    this.perspective = 1000
+    this.fov =
+      (180 * (2 * Math.atan(this.height / 2 / this.perspective))) / Math.PI
+    this.aspectRatio = this.width / this.height
+    this.camera = new PerspectiveCamera(this.fov, this.aspectRatio, 0.1, 2000)
+    this.camera.position.set(0, 0, this.perspective)
 
     this.renderer = new WebGLRenderer({
       canvas,
@@ -30,15 +30,14 @@ export default class Scenario {
     })
     this.renderer.setClearColor(new Color(0xffffff), 0)
     this.renderer.setSize(this.width, this.height)
+    this.renderer.setPixelRatio(window.devicePixelRatio)
 
     this.clock = new Clock()
   }
 
   updateCameraSize(width: number, height: number) {
-    this.camera.left = -width / 2
-    this.camera.right = width / 2
-    this.camera.top = height / 2
-    this.camera.bottom = -height / 2
+    this.aspectRatio = width / height
+    this.camera.aspect = this.aspectRatio
     this.camera.updateProjectionMatrix()
   }
 

@@ -4,12 +4,12 @@
     :onIcon="SunIcon"
     :offIcon="MoonIcon"
     :colors="{
-      bgOff: '#FFFFFF',
-      bgOn: '#111111',
-      thumbOff: '#111111',
-      thumbOn: '#FFFFFF',
-      iconOff: '#111111',
-      iconOn: '#FFFFFF',
+      bgOff: '#dde0ed',
+      bgOn: '#0C0D12',
+      thumbOff: '#0C0D12',
+      thumbOn: '#dde0ed',
+      iconOff: '#0C0D12',
+      iconOn: '#dde0ed',
     }"
     :checked="isLight"
     fadeIn

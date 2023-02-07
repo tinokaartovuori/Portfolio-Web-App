@@ -3,10 +3,10 @@
   <div class="flex">
     <WaveText
       text="Scroll to discover"
-      class="xs:text-base text-onyx text-sm font-light dark:text-white sm:text-xl md:text-2xl"
+      class="xs:text-base text-onyx dark:text-platinum text-sm font-light sm:text-xl md:text-2xl"
     />
     <div
-      class="up-and-down xs:text-base text-onyx px-2 text-sm font-light dark:text-white sm:text-xl md:text-2xl"
+      class="up-and-down xs:text-base text-onyx dark:text-platinum px-2 text-sm font-light sm:text-xl md:text-2xl"
     >
       ↓
     </div>

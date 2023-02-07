@@ -65,10 +65,10 @@ const props = defineProps({
     default: {
       bgOff: '#DC2626',
       bgOn: '#059669',
-      thumbOff: '#FFFFFF',
-      thumbOn: '#FFFFFF',
-      iconOn: '#FFFFFF',
-      iconOff: '#FFFFFF',
+      thumbOff: '#dde0ed',
+      thumbOn: '#dde0ed',
+      iconOn: '#dde0ed',
+      iconOff: '#dde0ed',
     },
   },
   fadeIn: {

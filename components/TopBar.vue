@@ -4,7 +4,7 @@
       <a href="#" class="flex items-center justify-center">
         <WaveText
           text="Tino Kaartovuori"
-          class="xs:text-base text-onyx text-sm font-light dark:text-white sm:text-xl md:text-2xl"
+          class="xs:text-base text-onyx dark:text-platinum text-sm font-light sm:text-xl md:text-2xl"
           onHover
         />
       </a>
@@ -14,7 +14,7 @@
         <a href="#" class="flex items-center justify-center">
           <WaveText
             text="About"
-            class="xs:text-base text-onyx text-sm font-light dark:text-white sm:text-xl md:text-2xl"
+            class="xs:text-base text-onyx dark:text-platinum text-sm font-light sm:text-xl md:text-2xl"
             onHover
           />
         </a>
