@@ -5,9 +5,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useAppStateStore } from '~/store/appState'
-const appStateStore = useAppStateStore()
-const { threeImageTracker } = storeToRefs(appStateStore)
+import { useThreeObjectStateStore } from '~/store/threeObjectState'
+const threeObjectStateStore = useThreeObjectStateStore()
+const threeObjectState = storeToRefs(threeObjectStateStore)
 
 const props = defineProps({
   imageUrl: {
@@ -28,7 +28,7 @@ onMounted(() => {
   if (!threeImg.value) return
 
   // Add the element to the domElementTracker store
-  threeImageTracker.value[props.threeReference] = threeImg.value
+  threeObjectStateStore.addThreeImage(props.threeReference, threeImg.value)
 })
 </script>
 

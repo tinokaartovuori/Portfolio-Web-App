@@ -6,9 +6,9 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useAppStateStore } from '~/store/appState'
-const appStateStore = useAppStateStore()
-const { domElementTracker } = storeToRefs(appStateStore) // Pinia store value for scrollY
+import { useThreeObjectStateStore } from '~/store/threeObjectState'
+const threeObjectStateStore = useThreeObjectStateStore()
+const { threeElementTracker } = storeToRefs(threeObjectStateStore)
 
 const props = defineProps({
   threeReference: {
@@ -27,8 +27,8 @@ onMounted(() => {
   const firstChild = slotChildren[0] as HTMLElement
   if (!firstChild) return
 
-  // Add the element to the domElementTracker store
-  domElementTracker.value[props.threeReference] = firstChild
+  // Add the element to the store
+  threeObjectStateStore.addThreeElement(props.threeReference, firstChild)
 })
 </script>
 

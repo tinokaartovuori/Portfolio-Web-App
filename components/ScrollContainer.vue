@@ -11,21 +11,22 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import gsap from 'gsap'
 
-import { useAppStateStore } from '~/store/appState'
+import { useScrollStateStore } from '~/store/scrollState'
 import Scrollbar from 'smooth-scrollbar'
 import OverscrollPlugin from 'smooth-scrollbar/plugins/overscroll'
 import SpeedControlPlugin from '../smooth-scrollbar-plugins/speedControl'
 import type { Data2d } from 'smooth-scrollbar/interfaces'
 
-const appStateStore = useAppStateStore()
+const scrollStateStore = useScrollStateStore()
 const scrollElement = ref<HTMLElement | null>(null)
 const scrollBar = ref<Scrollbar | null>(null)
 
 // Scroll position related stuff
-const { scrollY, scrollYMax, scrollYSpeed } = storeToRefs(appStateStore) // Pinia store
+const { scrollY, scrollYMax, scrollYSpeed } = storeToRefs(scrollStateStore) // Pinia store
 const scrollYWithoutOverscroll = ref<number>(0)
+
+const resizeObserver = ref<ResizeObserver | null>(null)
 
 onMounted(() => {
   /* Initializing the scrollbar */
@@ -38,7 +39,6 @@ onMounted(() => {
     damping: 0.1,
     renderByPixels: false,
     alwaysShowTracks: true,
-    delegateTo: document, // this is to make sure that the scroll event is not captured by the child elements
     plugins: {
       overscroll: {
         onScroll(overscroll: Data2d) {
@@ -80,11 +80,27 @@ onMounted(() => {
 
   // Update scrollYMax when child content height changes
   const scrollContent = scrollElement.value.children[0] as HTMLElement
-  const resizeObserver = new ResizeObserver(() => {
+
+  resizeObserver.value = new ResizeObserver(() => {
     if (!scrollElement.value) return
     scrollYMax.value =
       scrollContent.clientHeight - scrollElement.value.clientHeight
   })
-  resizeObserver.observe(scrollContent)
+  resizeObserver.value.observe(scrollContent)
+})
+
+onUnmounted(() => {
+  // Reset scroll position
+  scrollY.value = 0
+  scrollYMax.value = 0
+  scrollYSpeed.value = 0
+
+  // Remove delegateTo document
+  scrollBar.value?.destroy()
+
+  // Remove resize observer
+  if (resizeObserver.value) {
+    resizeObserver.value.disconnect()
+  }
 })
 </script>

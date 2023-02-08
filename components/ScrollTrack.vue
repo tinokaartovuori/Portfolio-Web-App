@@ -14,9 +14,9 @@
 import { ref } from 'vue'
 import gsap from 'gsap'
 import { storeToRefs } from 'pinia'
-import { useAppStateStore } from '~/store/appState'
-const appStateStore = useAppStateStore()
-const { scrollY, scrollYMax } = storeToRefs(appStateStore) //
+import { useScrollStateStore } from '~/store/scrollState'
+const scrollStateStore = useScrollStateStore()
+const { scrollY, scrollYMax } = storeToRefs(scrollStateStore)
 
 const track = ref<HTMLElement | null>(null)
 const indicator = ref<HTMLElement | null>(null)

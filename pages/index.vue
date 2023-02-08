@@ -72,7 +72,13 @@
   </ScrollContainer>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useThreeObjectStateStore } from '@/store/threeObjectState'
+const threeObjectStateStore = useThreeObjectStateStore()
+
+// Make sure to reset the store
+threeObjectStateStore.reset()
+</script>
 
 <style scoped>
 .index-intro_wrapper {

@@ -18,12 +18,12 @@
 </template>
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { useAppStateStore } from '~/store/appState'
+import { useThemeStateStore } from '~/store/themeState'
 import SunIcon from '../assets/icons/sun.svg?component'
 import MoonIcon from '../assets/icons/moon.svg?component'
 
-const appStateStore = useAppStateStore()
-const { colorMode } = storeToRefs(appStateStore)
+const themeStateStore = useThemeStateStore()
+const { colorMode } = storeToRefs(themeStateStore)
 
 const colorModeInstance = useColorMode()
 colorMode.value = colorModeInstance.preference as 'light' | 'dark'
