@@ -1,31 +1,51 @@
-import { Mesh, MeshBasicMaterial, ShapeGeometry, Object3D } from 'three'
+import {
+  Mesh,
+  MeshBasicMaterial,
+  ShapeGeometry,
+  Object3D,
+  Vector2,
+} from 'three'
 import { RoundedRectangleShape } from './RoundedRectangleShape'
 
 export class IntroRectangle extends Object3D {
   mesh: Mesh | undefined
   geometry: ShapeGeometry | undefined
   material: MeshBasicMaterial | undefined
-  windowWidth: number
-  windowHeight: number
+  element: HTMLDivElement
+
+  sizes: Vector2
+  offset: Vector2
+
   padding: number
   cornerRadius: number
 
-  constructor(windowWidth: number, windowHeight: number) {
+  constructor(element: HTMLDivElement) {
     super()
-    this.windowWidth = windowWidth
-    this.windowHeight = windowHeight
-
+    this.element = element
+    this.sizes = new Vector2(0, 0)
+    this.offset = new Vector2(0, 0)
     this.padding = this.calculatePadding()
     this.cornerRadius = this.calculateCornerRadius()
     this.createMesh()
+  }
+
+  getDimensions() {
+    const { width, height, top, left } = this.element.getBoundingClientRect()
+    this.sizes.set(width, height)
+    this.offset.set(
+      left - window.innerWidth / 2 + width / 2,
+      -top + window.innerHeight / 2 - height / 2,
+    )
+    this.padding = this.calculatePadding()
+    this.cornerRadius = this.calculateCornerRadius()
   }
 
   createMesh() {
     const shape = new RoundedRectangleShape(
       0,
       0,
-      this.windowWidth - this.padding * 2,
-      this.windowHeight - this.padding * 2,
+      this.sizes.x - this.padding * 2,
+      this.sizes.y - this.padding * 2,
       this.cornerRadius,
     )
     this.geometry = new ShapeGeometry(shape)
@@ -38,11 +58,12 @@ export class IntroRectangle extends Object3D {
     this.add(this.mesh)
   }
 
-  updateShape(windowWidth: number, windowHeight: number) {
-    this.windowWidth = windowWidth
-    this.windowHeight = windowHeight
-    this.padding = this.calculatePadding()
-    this.cornerRadius = this.calculateCornerRadius()
+  update() {
+    this.updateShape()
+  }
+
+  updateShape() {
+    this.getDimensions()
 
     this.geometry?.dispose()
     this.material?.dispose()
@@ -50,25 +71,43 @@ export class IntroRectangle extends Object3D {
     if (!this.mesh) return
     this.remove(this.mesh)
     this.createMesh()
+    this.updatePosition()
+  }
+
+  updateAspectRatio() {
+    this.updateShape()
+  }
+
+  updatePosition() {
+    if (!this.mesh) return
+    // this.updateShape()
+    this.getDimensions()
+    this.mesh.position.y = this.offset.y
+    this.mesh.position.x = this.offset.x
   }
 
   calculatePadding() {
-    if (this.windowWidth < 500) {
+    if (this.sizes.x < 500) {
       return 15
     }
-    if (this.windowWidth < 640) {
+    if (this.sizes.x < 640) {
       return 20
     }
     return 25
   }
 
   calculateCornerRadius() {
-    if (this.windowWidth < 500) {
+    if (this.sizes.x < 500) {
       return 15
     }
-    if (this.windowWidth < 640) {
+    if (this.sizes.x < 640) {
       return 20
     }
     return 25
+  }
+
+  dispose() {
+    this.mesh?.geometry.dispose()
+    this.mesh?.material.dispose()
   }
 }

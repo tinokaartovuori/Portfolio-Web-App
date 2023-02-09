@@ -7,14 +7,14 @@
 <script setup lang="ts">
 import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
+import ElementManager from './three-components/ElementManager'
 
-import { Ref } from 'vue'
+import { Ref, getCurrentInstance } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
 import { useScrollStateStore } from '~/store/scrollState'
 import { useWindowSize } from '@vueuse/core'
-import { IntroRectangle } from './three-components/IntroRectangle'
 
 const threeObjectState = useThreeObjectStateStore()
 const scrollState = useScrollStateStore()
@@ -29,34 +29,52 @@ const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
 // Scenario: a scene, a camera and a renderer
 let scenario: Scenario
 let imageManager: ImageManager
+let elementManager: ElementManager
 
 onMounted(() => {
   if (!threeCanvas.value) return
 
   scenario = new Scenario(threeCanvas.value)
   imageManager = new ImageManager(scenario.scene)
+  elementManager = new ElementManager(scenario.scene)
+
   imageManager.loadImages(threeImageTracker.value)
+  elementManager.loadElements(threeElementTracker.value)
   loop() // Start the animation loop
 })
 
 watch(aspectRatio, () => {
   if (!threeCanvas.value) return
   imageManager.updateImages(scrollYSpeed.value)
+  elementManager.updateElements()
+
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)
 })
 
 watch(scrollY, () => {
   imageManager.updateImages(scrollYSpeed.value)
+  elementManager.updateElementPositions()
 })
 
 watch(threeObjectState, () => {
+  forceUpdate()
   imageManager.removeImages()
+  elementManager.removeElements()
   imageManager.loadImages(threeImageTracker.value)
+  elementManager.loadElements(threeElementTracker.value)
 })
+
+function forceUpdate() {
+  const instance = getCurrentInstance()
+  if (instance) {
+    instance.proxy?.$forceUpdate()
+  }
+}
 
 const loop = () => {
   requestAnimationFrame(loop)
+
   scenario.render() // Render the scene
 }
 </script>

@@ -1,7 +1,7 @@
 <template>
   <ScrollContainer>
-    <ElementTracker threeReference="homeIntro">
-      <div class="home-intro mb-32 h-screen w-full">
+    <ElementTracker threeReference="homeIntro" object="IntroRectangle">
+      <div class="home-intro mb-32 h-screen w-full bg-slate-500/50">
         <div
           class="index-intro_wrapper flex h-screen w-full items-center justify-center"
         >
@@ -60,7 +60,7 @@
     <div class="grid h-[20vw] grid-cols-4">
       <div class="bg-green-400/20"></div>
       <div class="bg-blue-400/20"></div>
-      <ElementTracker threeReference="testSection2">
+      <ElementTracker threeReference="crazyPlaneTest" object="CrazyPlane">
         <div class="h-full w-full bg-purple-400/20"></div>
       </ElementTracker>
       <div class="bg-red-400/20"></div>

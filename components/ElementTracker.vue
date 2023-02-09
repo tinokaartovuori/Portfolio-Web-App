@@ -5,13 +5,15 @@
 </template>
 
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
 const threeObjectStateStore = useThreeObjectStateStore()
-const { threeElementTracker } = storeToRefs(threeObjectStateStore)
 
 const props = defineProps({
   threeReference: {
+    type: String,
+    required: true,
+  },
+  object: {
     type: String,
     required: true,
   },
@@ -28,7 +30,11 @@ onMounted(() => {
   if (!firstChild) return
 
   // Add the element to the store
-  threeObjectStateStore.addThreeElement(props.threeReference, firstChild)
+  threeObjectStateStore.addThreeElement(
+    props.threeReference,
+    firstChild,
+    props.object,
+  )
 })
 </script>
 

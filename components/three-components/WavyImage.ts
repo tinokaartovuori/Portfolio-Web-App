@@ -146,4 +146,9 @@ export default class WavyImage extends Object3D {
       )
     } */
   }
+
+  dispose() {
+    this.mesh.geometry.dispose()
+    this.mesh.material.dispose()
+  }
 }
