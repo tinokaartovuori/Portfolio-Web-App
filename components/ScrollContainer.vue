@@ -11,9 +11,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import gsap from 'gsap'
 
 import { useScrollStateStore } from '~/store/scrollState'
-import Scrollbar from 'smooth-scrollbar'
+import Scrollbar from '@tinokaartovuori/smooth-scrollbar'
 import OverscrollPlugin from 'smooth-scrollbar/plugins/overscroll'
 import SpeedControlPlugin from '../smooth-scrollbar-plugins/speedControl'
 import type { Data2d } from 'smooth-scrollbar/interfaces'
@@ -30,7 +31,7 @@ const resizeObserver = ref<ResizeObserver | null>(null)
 
 onMounted(() => {
   /* Initializing the scrollbar */
-  Scrollbar.use(OverscrollPlugin)
+  Scrollbar.use(OverscrollPlugin as any)
   Scrollbar.use(SpeedControlPlugin)
 
   if (!scrollElement.value) return
@@ -39,6 +40,7 @@ onMounted(() => {
     damping: 0.1,
     renderByPixels: false,
     alwaysShowTracks: true,
+    externalRAF: true,
     plugins: {
       overscroll: {
         onScroll(overscroll: Data2d) {
@@ -77,16 +79,26 @@ onMounted(() => {
       scrollYSpeed.value = scrollY.value - prevousScrollY
     }
   })
-
+  
   // Update scrollYMax when child content height changes
   const scrollContent = scrollElement.value.children[0] as HTMLElement
-
+  
   resizeObserver.value = new ResizeObserver(() => {
     if (!scrollElement.value) return
     scrollYMax.value =
-      scrollContent.clientHeight - scrollElement.value.clientHeight
+    scrollContent.clientHeight - scrollElement.value.clientHeight
   })
   resizeObserver.value.observe(scrollContent)
+})
+
+/* 
+* NOTE: We are rendering the scrollbar manually to make sure that the syncronization
+* between the scrollbar and Three.js is working properly.
+* This can be moved to a separate component along with the three.js loop to make a combined
+* render loop if needed.
+*/
+gsap.ticker.add(() => {
+  scrollBar.value?.render()
 })
 
 onUnmounted(() => {

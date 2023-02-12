@@ -2,8 +2,8 @@
 // Free to use, no MIT license required
 // Author: @tinokaartovuori
 
-import { ScrollbarPlugin } from 'smooth-scrollbar'
-import type { Data2d } from 'smooth-scrollbar/interfaces'
+import { ScrollbarPlugin } from '@tinokaartovuori/smooth-scrollbar'
+import type { Data2d } from '@tinokaartovuori/smooth-scrollbar/interfaces'
 
 class SpeedControlPlugin extends ScrollbarPlugin {
   static pluginName = 'speedControl'

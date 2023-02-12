@@ -1,5 +1,5 @@
-import { ScrollbarPlugin } from 'smooth-scrollbar'
-import type { Data2d } from 'smooth-scrollbar/interfaces'
+import { ScrollbarPlugin } from '@tinokaartovuori/smooth-scrollbar'
+import type { Data2d } from '@tinokaartovuori/smooth-scrollbar/interfaces'
 
 class disableScroll extends ScrollbarPlugin {
   static pluginName = 'disableScroll'
