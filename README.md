@@ -12,6 +12,7 @@ This project is built using the following technologies:
 - TypeScript: A typed superset of JavaScript that adds optional static typing to the language
 - TailwindCSS: A utility-first CSS framework
 - Three.js: A JavaScript library for creating 3D animations and visualizations
+- Docker: A platform for developing, shipping, and running applications
 
 ## Commands
 
@@ -22,7 +23,17 @@ This project is built using the following technologies:
 - `npm run postinstall`: Runs automatically after installation to prepare the project for development
 - `npm run format`: Runs Prettier and formats all project files to correct style
 
-## Usage
+## Docker Development Setup
+
+To set up this project with Docker, first, make sure you have Docker installed on your machine. Then, you can build the Docker image with the following command:
+
+```bash
+docker-compose up
+```
+
+With this setup, any changes you make to your project files on your local machine will be immediately reflected inside the Docker container, and your application will automatically reload with the new changes.
+
+## Usage Without Docker
 
 To run this project locally, clone the repository and install the dependencies by running:
 `npm install`
@@ -81,6 +92,14 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
 - [x] ^ Mapped some test images and objects to HTML elements
 - [x] Tested some shaders to make images react to scrolling
 - [x] Added some a few new colors
+
+</details>
+
+<details>
+  <summary>28.5.2023</summary>
+  </br>
+
+- [x] Dockerization of the application
 
 </details>
 
