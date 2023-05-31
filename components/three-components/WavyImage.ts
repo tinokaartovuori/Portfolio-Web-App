@@ -9,83 +9,139 @@ import {
   MeshBasicMaterial,
 } from 'three'
 
-// NOTE: This class is in work in progress
-export default class WavyImage extends Object3D {
-  // This is the object that we want to sync the position of
-  mesh: Mesh
-  geometry: PlaneGeometry
-  material: ShaderMaterial | MeshBasicMaterial
+/**
+ * Class representing a wavy image in 3D space using THREE.js library
+ */
+export default class WavyImage3D extends Object3D {
+  // Object properties
+  meshObject: Mesh
+  planeGeometry: PlaneGeometry
+  shaderMaterial: ShaderMaterial | MeshBasicMaterial
 
-  element: HTMLImageElement
-  sizes: Vector2
-  offset: Vector2
+  imageElement: HTMLImageElement
+  dimensions: Vector2
+  positionOffset: Vector2
+
+  scrollSpeedTarget: number
+  scrollSpeedCurrent: number
+  smoothingFactor: number
 
   imageTexture: TextureLoader
-  uniforms: any
+  shaderUniforms: any
 
-  constructor(element: HTMLImageElement) {
+  /**
+   * Creates a WavyImage3D object
+   * @param {HTMLImageElement} imageElement - The image to display as a 3D object
+   */
+  constructor(imageElement: HTMLImageElement) {
     super()
-    this.mesh = new Mesh()
 
-    this.element = element
-    this.sizes = new Vector2(0, 0)
-    this.offset = new Vector2(0, 0)
-    this.uniforms = {}
-    this.createMesh()
+    this.meshObject = new Mesh()
+
+    this.imageElement = imageElement
+    this.dimensions = new Vector2(0, 0)
+    this.positionOffset = new Vector2(0, 0)
+
+    this.scrollSpeedTarget = 0
+    this.scrollSpeedCurrent = 0
+    this.smoothingFactor = 0.2
+
+    this.shaderUniforms = {}
+    this.createMeshObject()
   }
 
-  getDimensions() {
-    const { width, height, top, left } = this.element.getBoundingClientRect()
-    this.sizes.set(width, height)
-    this.offset.set(
+  /**
+   * Calculates the dimensions and offsets of the image element
+   */
+  calculateDimensions() {
+    const { width, height, top, left } =
+      this.imageElement.getBoundingClientRect()
+    this.dimensions.set(width, height)
+    this.positionOffset.set(
       left - window.innerWidth / 2 + width / 2,
       -top + window.innerHeight / 2 - height / 2,
     )
   }
 
-  createMesh() {
-    this.getDimensions()
-    this.geometry = new PlaneGeometry(1, 1, 30, 30)
-    this.imageTexture = new TextureLoader().load(this.element.src)
+  /**
+   * Creates the mesh object
+   */
+  createMeshObject() {
+    this.calculateDimensions()
+    this.planeGeometry = new PlaneGeometry(1, 1, 30, 30)
+    this.imageTexture = new TextureLoader().load(this.imageElement.src)
 
-    this.uniforms = {
+    // Set shader uniforms
+    this.shaderUniforms = {
       uTexture: { value: this.imageTexture },
-      uOffset: { value: new Vector2(0, 0) },
+      uScrollSpeed: { value: new Vector2(0, 0) },
       uAlpha: { value: 1 },
-      uYPosition: { value: 0 },
+      uPlaneYPosition: { value: 0 },
       uMouse: { value: new Vector2(0, 0) },
+      uPlaneRelativeYSize: { value: 0 },
     }
 
-    this.material = new ShaderMaterial({
+    // Create shader material
+    this.shaderMaterial = new ShaderMaterial({
       vertexShader: `
+      // Define uniforms
       uniform sampler2D uTexture;
-      uniform vec2 uOffset;
-      uniform float uYPosition; // -1 to 1 from top to bottom
+      uniform vec2 uScrollSpeed;
+      uniform float uPlaneYPosition; 
+      uniform float uPlaneRelativeYSize; 
       varying vec2 vUv;
 
       #define M_PI 3.1415926535897932384626433832795
 
+      // Function for mapping values from one range to another
+      float map(float value, float start1, float stop1, float start2, float stop2) {
+        return start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
+      }
+
+      // Function for calculating the curve effect based on screen Y point and amount
+      float curveEffect(float screenYPoint, float amount) {
+        return sin(screenYPoint * M_PI) * amount;
+      }
+
+      // Function for calculating the curve effect matching
+      float curveEffectMatching(float uvY, float direction) {
+        float planeRelativeYSize = uPlaneRelativeYSize;
+        float planeTop = uPlaneYPosition - planeRelativeYSize / 2.0;
+        float planeBottom = uPlaneYPosition + planeRelativeYSize / 2.0;
+        float uvYMatching = map(uvY, 0.0, 1.0, planeBottom, planeTop);
+        return curveEffect(uvYMatching + (0.25 * direction), 20.0);
+      }
+
+      // Function for deformation curve
       vec3 deformationCurve(vec3 position, vec2 uv, vec2 offset) {
-        // Squeeze the box top or bottom when offset.y is negative or positive
-        position.x = position.x + (cos(uv.y * M_PI) * offset.x);
-        position.y = position.y - offset.y * 0.3;
-        position.z = position.z + (cos(uv.y * M_PI) * offset.y * 300.0) - (abs(offset.y) * 700.0);
+        float distFromCenter = abs(uPlaneYPosition);
+        float effectFactor = distFromCenter * 10.0;
+
+        position.x = position.x + (sin(uv.y * M_PI) * offset.x) * 0.2;
+        position.y = position.y + (sin(uv.x * M_PI) * offset.y) * 0.2;
+
+        float direction = offset.y > 0.0 ? 1.0 : -1.0;
+        position.z = position.z + curveEffectMatching(uv.y, direction) * 60.0 * offset.y - abs(offset.y) * 500.0;
+
         return position;
       }
 
       void main() {
         vUv = uv;
-        vec3 newPosition = deformationCurve(position, uv, uOffset);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+        vec3 newPosition = deformationCurve(position, uv, uScrollSpeed);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
       }
       `,
       fragmentShader: `
+      // Define uniforms
       uniform sampler2D uTexture;
       uniform float uAlpha;
-      uniform vec2 uOffset;
-      uniform float uYPosition; // -1 to 1 from top to bottom
+      uniform vec2 uScrollSpeed;
+      uniform float uPlaneYPosition; 
+      uniform float uRelativePlaneYSize;
       varying vec2 vUv;
 
+      // Function for RGB shift
       vec3 rgbShift(sampler2D textureImage, vec2 uv, vec2 offset) {
         float r = texture2D(textureImage, uv + offset).r;
         vec2 gb = texture2D(textureImage, uv).gb;
@@ -93,62 +149,62 @@ export default class WavyImage extends Object3D {
       }
 
       void main() {
-        // Moving the textrue in vertical direction based on the offset
-        vec2 vUv = vUv + vec2(0.0, uYPosition * 0.25);
-        // Scale the texture by 1.2 bigger and keep it in the center
-        vUv = vUv * 0.9 + vec2(0.075, 0.075);
+        vec2 newUV = vUv - vec2(0.0, (uPlaneYPosition / 2.0) * 0.30);
 
-        //vec3 color = rgbShift(uTexture, vUv, uOffset);
-        vec3 color = texture2D(uTexture, vUv).rgb;
+        // Scale the texture by 1.2 bigger and keep it in the center
+        newUV = newUV * 0.9 + vec2(0.075, 0.075);
+
+        vec3 color = texture2D(uTexture, newUV).rgb;
         gl_FragColor = vec4(color, uAlpha);
       }
       `,
-      uniforms: this.uniforms,
+      uniforms: this.shaderUniforms,
       transparent: true,
       side: DoubleSide,
     })
 
-    this.mesh.geometry = this.geometry
-    this.mesh.material = this.material
-    this.mesh.scale.set(this.sizes.x, this.sizes.y, 1)
-    this.add(this.mesh)
+    this.meshObject.geometry = this.planeGeometry
+    this.meshObject.material = this.shaderMaterial
+    this.meshObject.scale.set(this.dimensions.x, this.dimensions.y, 1)
+    this.add(this.meshObject)
   }
 
+  /**
+   * Updates the mesh object based on scroll speed
+   * @param {number} scrollYSpeed - The vertical scroll speed
+   */
   update(scrollYSpeed: number) {
-    this.getDimensions()
-    this.mesh.position.x = this.offset.x
-    this.mesh.position.y = this.offset.y
-    this.mesh.scale.set(this.sizes.x, this.sizes.y, 1)
-    this.uniforms.uYPosition.value =
-      ((this.offset.y - this.sizes.y / 2) /
-        (window.innerHeight + this.sizes.y * 2)) *
-      2
-    this.uniforms.uOffset.value.set(this.offset.x * 0.0, -scrollYSpeed * 0.004)
-    /* if (window.innerWidth < 460) {
-      this.uniforms.uOffset.value.set(
-        this.offset.x * 0.0,
-        -scrollYSpeed * 0.0065,
-      )
-    } else if (window.innerWidth < 650) {
-      this.uniforms.uOffset.value.set(
-        this.offset.x * 0.0,
-        -scrollYSpeed * 0.005,
-      )
-    } else if (window.innerWidth < 800) {
-      this.uniforms.uOffset.value.set(
-        this.offset.x * 0.0,
-        -scrollYSpeed * 0.004,
-      )
-    } else {
-      this.uniforms.uOffset.value.set(
-        this.offset.x * 0.0,
-        -scrollYSpeed * 0.003,
-      )
-    } */
+    this.calculateDimensions()
+
+    this.scrollSpeedTarget = scrollYSpeed
+
+    // Update mesh position and scale
+    this.meshObject.position.x = this.positionOffset.x
+    this.meshObject.position.y = this.positionOffset.y
+
+    this.meshObject.scale.set(this.dimensions.x, this.dimensions.y, 1)
+
+    // Update shader uniforms
+    this.shaderUniforms.uPlaneYPosition.value =
+      -this.positionOffset.y / window.innerHeight
+    this.shaderUniforms.uPlaneRelativeYSize.value =
+      this.dimensions.y / window.innerHeight
+
+    // Smooth scroll speed
+    this.scrollSpeedCurrent +=
+      (this.scrollSpeedTarget - this.scrollSpeedCurrent) * this.smoothingFactor
+
+    this.shaderUniforms.uScrollSpeed.value.set(
+      this.positionOffset.x * 0.0,
+      -this.scrollSpeedCurrent * 0.004,
+    )
   }
 
+  /**
+   * Dispose the mesh geometry and material
+   */
   dispose() {
-    this.mesh.geometry.dispose()
-    this.mesh.material.dispose()
+    this.meshObject.geometry.dispose()
+    this.meshObject.material.dispose()
   }
 }

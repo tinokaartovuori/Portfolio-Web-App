@@ -1,6 +1,6 @@
 <template>
-  <div class="dark:bg-onyx bg-platinum absolute top-0 bottom-0 left-0 right-0">
-    <canvas ref="threeCanvas" class="absolute top-0 bottom-0 left-0 right-0" />
+  <div class="absolute bottom-0 left-0 right-0 top-0 bg-platinum dark:bg-onyx">
+    <canvas ref="threeCanvas" class="absolute bottom-0 left-0 right-0 top-0" />
   </div>
 </template>
 

@@ -37,7 +37,9 @@ export default class Scenario {
 
   updateCameraSize(width: number, height: number) {
     this.aspectRatio = width / height
+    this.fov = (180 * (2 * Math.atan(height / 2 / this.perspective))) / Math.PI
     this.camera.aspect = this.aspectRatio
+    this.camera.fov = this.fov
     this.camera.updateProjectionMatrix()
   }
 

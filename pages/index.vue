@@ -7,7 +7,7 @@
         >
           <div class="-mt-[5vh]">
             <p
-              class="xxs:text-xl text-onyx dark:text-platinum text-lg sm:text-2xl md:text-4xl lg:text-5xl"
+              class="text-lg text-onyx dark:text-platinum xxs:text-xl sm:text-2xl md:text-4xl lg:text-5xl"
             >
               Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi quis
               similique quas, autem possimus reprehenderit perspiciatis
@@ -16,16 +16,16 @@
             </p>
             <WaveText
               text="Lorem ipsum dolor!"
-              class="xxs:text-xl text-onyx dark:text-platinum text-lg sm:text-2xl md:text-3xl lg:text-4xl"
+              class="text-lg text-onyx dark:text-platinum xxs:text-xl sm:text-2xl md:text-3xl lg:text-4xl"
             /><br />
             <button class="mt-10 cursor-pointer">
               <!-- TODO: Make a nice custom animated link -->
               <span
-                class="xxs:text-xl text-onyx dark:text-platinum text-lg sm:text-2xl md:text-3xl lg:text-4xl"
+                class="text-lg text-onyx dark:text-platinum xxs:text-xl sm:text-2xl md:text-3xl lg:text-4xl"
                 >→
               </span>
               <span
-                class="xxs:text-xl text-onyx dark:text-platinum text-lg sm:text-2xl md:text-3xl lg:text-4xl"
+                class="text-lg text-onyx dark:text-platinum xxs:text-xl sm:text-2xl md:text-3xl lg:text-4xl"
                 >Lorem ipsum dolor</span
               >
             </button>
@@ -41,18 +41,42 @@
         />
       </a>
       <div class="flex h-auto w-full flex-col content-between justify-between">
-        <span class="text-onyx dark:text-platinum text-2xl">Test Image</span>
-        <span class="text-onyx dark:text-platinum text-xl">Such Wow</span>
+        <span class="text-2xl text-onyx dark:text-platinum">Test Image</span>
+        <span class="text-xl text-onyx dark:text-platinum">Such Wow</span>
       </div>
     </div>
     <div class="mb-32 flex h-full w-full flex-col px-[12%] md:flex-row">
       <div class="flex h-auto w-full flex-col content-between justify-between">
-        <span class="text-onyx dark:text-platinum text-2xl">Test Image</span>
-        <span class="text-onyx dark:text-platinum text-xl">Such Wow</span>
+        <span class="text-2xl text-onyx dark:text-platinum">Test Image</span>
+        <span class="text-xl text-onyx dark:text-platinum">Such Wow</span>
       </div>
       <a>
         <ThreeImage
           threeReference="testImage2"
+          imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
+        />
+      </a>
+    </div>
+    <div class="mb-32 flex h-full w-full flex-col px-[12%] md:flex-row">
+      <div class="flex h-auto w-full flex-col content-between justify-between">
+        <span class="text-2xl text-onyx dark:text-platinum">Test Image</span>
+        <span class="text-xl text-onyx dark:text-platinum">Such Wow</span>
+      </div>
+      <a>
+        <ThreeImage
+          threeReference="testImage3"
+          imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
+        />
+      </a>
+    </div>
+    <div class="mb-32 flex h-full w-full flex-col px-[12%] md:flex-row">
+      <div class="flex h-auto w-full flex-col content-between justify-between">
+        <span class="text-2xl text-onyx dark:text-platinum">Test Image</span>
+        <span class="text-xl text-onyx dark:text-platinum">Such Wow</span>
+      </div>
+      <a>
+        <ThreeImage
+          threeReference="testImage4"
           imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
         />
       </a>
