@@ -1,7 +1,7 @@
 <template>
   <ScrollContainer>
     <ElementTracker threeReference="homeIntro" object="IntroRectangle">
-      <div class="home-intro mb-32 h-screen w-full bg-slate-500/50">
+      <div class="home-intro mb-32 h-screen w-full">
         <div
           class="index-intro_wrapper flex h-screen w-full items-center justify-center"
         >
