@@ -1,9 +1,9 @@
 <template>
   <ScrollContainer>
     <ElementTracker threeReference="homeIntro" object="IntroRectangle">
-      <div class="home-intro mb-32 h-screen w-full">
+      <div class="home-intro mb-32 h-[100dvh] w-full">
         <div
-          class="index-intro_wrapper flex h-screen w-full items-center justify-center"
+          class="index-intro_wrapper flex h-[100dvh] w-full items-center justify-center"
         >
           <div class="-mt-[5vh]">
             <p
