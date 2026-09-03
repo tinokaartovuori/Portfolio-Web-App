@@ -1,0 +1,9 @@
+# Normalize line endings so prettier --check is a usable gate on any machine
+* text=auto eol=lf
+
+# Generated: base64 font CSS, never hand-edited
+assets/fonts/** linguist-generated=true
+
+*.png binary
+*.gif binary
+*.svg text eol=lf
