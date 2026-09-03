@@ -1,14 +1,16 @@
 // store/filters.js
 import { defineStore } from 'pinia'
 
+interface ThreeElementEntry {
+  element: HTMLElement
+  object: string
+}
+
 export const useThreeObjectStateStore = defineStore({
   id: 'three-object-state-store',
   state: () => {
     return {
-      threeElementTracker: {} as Record<
-        string,
-        { element: HTMLElement; object: string }
-      >,
+      threeElementTracker: {} as Record<string, ThreeElementEntry>,
       threeImageTracker: {} as Record<string, HTMLImageElement>,
     }
   },
@@ -21,6 +23,10 @@ export const useThreeObjectStateStore = defineStore({
     },
     addThreeImage(id: string, element: HTMLImageElement) {
       this.threeImageTracker[id] = element
+    },
+    remove(threeReference: string) {
+      delete this.threeElementTracker[threeReference]
+      delete this.threeImageTracker[threeReference]
     },
     reset() {
       this.threeElementTracker = {}

@@ -84,9 +84,7 @@
     <div class="grid h-[20vw] grid-cols-4">
       <div class="bg-green-400/20"></div>
       <div class="bg-blue-400/20"></div>
-      <ElementTracker threeReference="crazyPlaneTest" object="CrazyPlane">
-        <div class="h-full w-full bg-purple-400/20"></div>
-      </ElementTracker>
+      <div class="h-full w-full bg-purple-400/20"></div>
       <div class="bg-red-400/20"></div>
     </div>
     <TestSection class="bg-green-500/50" />

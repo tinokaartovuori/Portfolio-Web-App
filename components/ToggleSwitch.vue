@@ -1,8 +1,11 @@
 <template>
-  <div
+  <button
     ref="backgroundElement"
-    class="z-10 flex h-8 w-16 cursor-pointer items-center rounded-full p-1 transition-none"
+    type="button"
+    role="switch"
+    class="z-10 flex h-8 w-16 cursor-pointer appearance-none items-center rounded-full p-1 transition-none"
     :aria-checked="checked"
+    :aria-label="label"
     @click="toggle"
   >
     <div
@@ -27,11 +30,11 @@
         <component :is="offIcon" name="off" />
       </div>
     </div>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">
-import { PropType, ref } from 'vue'
+import { PropType, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 
 // Make an interface for Colors object
@@ -76,9 +79,15 @@ const props = defineProps({
     required: false,
     default: false,
   },
+  label: {
+    // Accessible name for the switch, since it only renders icons
+    type: String,
+    required: false,
+    default: 'Toggle',
+  },
 })
 
-const backgroundElement = ref<HTMLElement | null>(null)
+const backgroundElement = ref<HTMLButtonElement | null>(null)
 const handleElement = ref<HTMLElement | null>(null)
 const iconElement = ref<HTMLElement | null>(null)
 const onIconElement = ref<HTMLElement | null>(null)
@@ -86,7 +95,7 @@ const offIconElement = ref<HTMLElement | null>(null)
 
 const emits = defineEmits(['update:checked'])
 const colors = ref<Colors>(props.colors)
-const checked = ref<Boolean>(props.checked)
+const checked = ref<boolean>(props.checked)
 
 const timeline = gsap.timeline()
 
@@ -227,6 +236,17 @@ function startFadeIn() {
   })
   timeline.play(0)
 }
+
+// The parent owns the truth (here: the resolved color mode), so follow it when it
+// changes from anywhere other than this switch — e.g. the OS theme flipping.
+watch(
+  () => props.checked,
+  (value) => {
+    if (value === checked.value) return
+    checked.value = value
+    value ? useOn(0.5) : useOff(0.5)
+  },
+)
 
 onMounted(() => {
   checked.value = props.checked

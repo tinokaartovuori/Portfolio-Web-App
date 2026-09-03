@@ -1,5 +1,5 @@
 import svgLoader from 'vite-svg-loader'
-import { fileURLToPath, URL } from 'url'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -11,6 +11,35 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@nuxtjs/google-fonts',
   ],
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'en',
+      },
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      title: 'Portfolio',
+      titleTemplate: '%s · Tino Kaartovuori',
+      meta: [
+        {
+          name: 'description',
+          content:
+            'Portfolio of Tino Kaartovuori, a web developer building interactive, motion-driven experiences for the browser.',
+        },
+        {
+          name: 'theme-color',
+          content: '#dde0ed',
+          media: '(prefers-color-scheme: light)',
+        },
+        {
+          name: 'theme-color',
+          content: '#0c0d12',
+          media: '(prefers-color-scheme: dark)',
+        },
+      ],
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    },
+  },
   colorMode: {
     classSuffix: '',
   },

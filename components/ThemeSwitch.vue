@@ -12,25 +12,21 @@
       iconOn: '#dde0ed',
     }"
     :checked="isLight"
+    label="Light mode"
     fadeIn
     @update:checked="toggleTheme"
   />
 </template>
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { useThemeStateStore } from '~/store/themeState'
 import SunIcon from '../assets/icons/sun.svg?component'
 import MoonIcon from '../assets/icons/moon.svg?component'
 
-const themeStateStore = useThemeStateStore()
-const { colorMode } = storeToRefs(themeStateStore)
-
 const colorModeInstance = useColorMode()
-colorMode.value = colorModeInstance.preference as 'light' | 'dark'
-const isLight = ref<boolean>(colorModeInstance.preference === 'light')
+
+// `preference` can be 'system', so the resolved `value` is what the switch shows
+const isLight = computed(() => colorModeInstance.value === 'light')
 
 function toggleTheme(value: boolean) {
   colorModeInstance.preference = value ? 'light' : 'dark'
-  colorMode.value = value ? 'light' : 'dark'
 }
 </script>

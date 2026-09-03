@@ -15,6 +15,7 @@ export class IntroRectangle extends Object3D {
 
   sizes: Vector2
   offset: Vector2
+  meshSizes: Vector2
 
   padding: number
   cornerRadius: number
@@ -24,6 +25,7 @@ export class IntroRectangle extends Object3D {
     this.element = element
     this.sizes = new Vector2(0, 0)
     this.offset = new Vector2(0, 0)
+    this.meshSizes = new Vector2(0, 0)
     this.padding = this.calculatePadding()
     this.cornerRadius = this.calculateCornerRadius()
     this.createMesh()
@@ -55,6 +57,7 @@ export class IntroRectangle extends Object3D {
       opacity: 0.5,
     })
     this.mesh = new Mesh(this.geometry, this.material)
+    this.meshSizes.copy(this.sizes)
     this.add(this.mesh)
   }
 
@@ -65,11 +68,23 @@ export class IntroRectangle extends Object3D {
   updateShape() {
     this.getDimensions()
 
+    // The shape only has to be re-triangulated when the element resized
+    if (this.mesh && this.meshSizes.equals(this.sizes)) {
+      this.updatePosition()
+      return
+    }
+
+    this.rebuildMesh()
+  }
+
+  rebuildMesh() {
+    if (this.mesh) {
+      this.remove(this.mesh)
+    }
+
     this.geometry?.dispose()
     this.material?.dispose()
 
-    if (!this.mesh) return
-    this.remove(this.mesh)
     this.createMesh()
     this.updatePosition()
   }
@@ -107,7 +122,7 @@ export class IntroRectangle extends Object3D {
   }
 
   dispose() {
-    this.mesh?.geometry.dispose()
-    this.mesh?.material.dispose()
+    this.geometry?.dispose()
+    this.material?.dispose()
   }
 }

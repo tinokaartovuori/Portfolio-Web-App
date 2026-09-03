@@ -1,19 +1,20 @@
 <template>
   <div
     ref="track"
-    class="bg-onyx xs:w-1 absolute right-0 top-0 bottom-0 w-0.5 dark:bg-neutral-400 sm:w-1.5"
+    class="absolute bottom-0 right-0 top-0 w-0.5 bg-onyx dark:bg-neutral-800 xs:w-1 sm:w-1.5"
   >
     <div
       ref="indicator"
-      class="xs:w-1 absolute right-0 top-0 w-0.5 rounded-full bg-pink-500 sm:w-1.5"
+      class="absolute right-0 top-0 w-0.5 rounded-full bg-pink-500 xs:w-1 sm:w-1.5"
     ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import gsap from 'gsap'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { gsap } from 'gsap'
 import { storeToRefs } from 'pinia'
+import { useWindowSize } from '@vueuse/core'
 import { useScrollStateStore } from '~/store/scrollState'
 const scrollStateStore = useScrollStateStore()
 const { scrollY, scrollYMax } = storeToRefs(scrollStateStore)
@@ -21,16 +22,50 @@ const { scrollY, scrollYMax } = storeToRefs(scrollStateStore)
 const track = ref<HTMLElement | null>(null)
 const indicator = ref<HTMLElement | null>(null)
 
-gsap.ticker.add(() => {
+const { height: windowHeight } = useWindowSize()
+
+// Cached so the per frame update only has to write the indicator position
+let trackHeight = 0
+let indicatorHeight = 0
+let setIndicatorY: ((value: number) => void) | null = null
+
+/* scrollYMax is 0 before the first scroll event and after every navigation,
+ * so the indicator is collapsed instead of dividing by zero. */
+const updateIndicatorHeight = () => {
   if (!track.value || !indicator.value) return
-  const trackHeight = track.value.clientHeight
+  trackHeight = track.value.clientHeight
   // Indicator height is ratio of track height to scrollYMax
-  const indicatorHeight = ((trackHeight / scrollYMax.value) * trackHeight) / 2
-  const scrollYPercentage = scrollY.value / scrollYMax.value
-  const indicatorY = scrollYPercentage * (trackHeight - indicatorHeight)
-  gsap.set(indicator.value, { y: indicatorY })
-  // Update indicator height
+  indicatorHeight =
+    scrollYMax.value > 0
+      ? ((trackHeight / scrollYMax.value) * trackHeight) / 2
+      : 0
   gsap.set(indicator.value, { height: indicatorHeight })
+}
+
+const updateIndicatorPosition = () => {
+  if (!setIndicatorY || scrollYMax.value <= 0) return
+  const scrollYPercentage = scrollY.value / scrollYMax.value
+  setIndicatorY(scrollYPercentage * (trackHeight - indicatorHeight))
+}
+
+watch([scrollYMax, windowHeight], () => {
+  updateIndicatorHeight()
+  updateIndicatorPosition()
+})
+
+onMounted(() => {
+  if (indicator.value) {
+    setIndicatorY = gsap.quickSetter(indicator.value, 'y', 'px') as (
+      value: number,
+    ) => void
+  }
+  updateIndicatorHeight()
+  updateIndicatorPosition()
+  gsap.ticker.add(updateIndicatorPosition)
+})
+
+onUnmounted(() => {
+  gsap.ticker.remove(updateIndicatorPosition)
 })
 </script>
 

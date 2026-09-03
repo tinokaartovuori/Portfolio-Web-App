@@ -9,9 +9,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import gsap from 'gsap'
+import { gsap } from 'gsap'
 
 import { useScrollStateStore } from '~/store/scrollState'
 import Scrollbar from '@tinokaartovuori/smooth-scrollbar'
@@ -29,6 +29,24 @@ const scrollYWithoutOverscroll = ref<number>(0)
 
 const resizeObserver = ref<ResizeObserver | null>(null)
 
+let previousScrollY = 0
+
+/*
+ * NOTE: We are rendering the scrollbar manually to make sure that the syncronization
+ * between the scrollbar and Three.js is working properly.
+ * This can be moved to a separate component along with the three.js loop to make a combined
+ * render loop if needed.
+ */
+const renderScrollBar = () => {
+  scrollBar.value?.render()
+  /* The only place where scrollYSpeed is written: the distance travelled during
+   * this frame, no matter which of the scrollbar callbacks moved scrollY. */
+  const delta = scrollY.value - previousScrollY
+  previousScrollY = scrollY.value
+  // If scroll delta abs is smaller than 0.1, then set scrollYSpeed to 0
+  scrollYSpeed.value = Math.abs(delta) < 0.1 ? 0 : delta
+}
+
 onMounted(() => {
   /* Initializing the scrollbar */
   Scrollbar.use(OverscrollPlugin as any)
@@ -44,13 +62,7 @@ onMounted(() => {
     plugins: {
       overscroll: {
         onScroll(overscroll: Data2d) {
-          const prevousScrollY = scrollY.value
           scrollY.value = overscroll.y + scrollYWithoutOverscroll.value
-          if (Math.abs(scrollY.value - prevousScrollY) < 0.1) {
-            scrollYSpeed.value = 0
-          } else {
-            scrollYSpeed.value = scrollY.value - prevousScrollY
-          }
         },
         effect: 'bounce',
         damping: 0.05,
@@ -68,40 +80,31 @@ onMounted(() => {
   scrollBar.value.track.yAxis.element.remove()
 
   scrollBar.value.addListener(({ offset, limit }) => {
-    const prevousScrollY = scrollY.value
     scrollYWithoutOverscroll.value = offset.y
     scrollY.value = offset.y
     scrollYMax.value = limit.y
-    // If scroll delta abs is smaller than 0.1, then set scrollYSpeed to 0
-    if (Math.abs(scrollY.value - prevousScrollY) < 0.1) {
-      scrollYSpeed.value = 0
-    } else {
-      scrollYSpeed.value = scrollY.value - prevousScrollY
-    }
   })
-  
-  // Update scrollYMax when child content height changes
-  const scrollContent = scrollElement.value.children[0] as HTMLElement
-  
-  resizeObserver.value = new ResizeObserver(() => {
-    if (!scrollElement.value) return
-    scrollYMax.value =
-    scrollContent.clientHeight - scrollElement.value.clientHeight
-  })
-  resizeObserver.value.observe(scrollContent)
-})
 
-/* 
-* NOTE: We are rendering the scrollbar manually to make sure that the syncronization
-* between the scrollbar and Three.js is working properly.
-* This can be moved to a separate component along with the three.js loop to make a combined
-* render loop if needed.
-*/
-gsap.ticker.add(() => {
-  scrollBar.value?.render()
+  // Update scrollYMax when child content height changes
+  const scrollContent = scrollElement.value.firstElementChild
+  if (scrollContent) {
+    resizeObserver.value = new ResizeObserver(() => {
+      if (!scrollBar.value) return
+      /* Recalculating the geometry keeps limit.y - the scrollbar's own idea of
+       * the maximum scroll position - the single source of truth. */
+      scrollBar.value.update()
+      scrollYMax.value = scrollBar.value.limit.y
+    })
+    resizeObserver.value.observe(scrollContent)
+  }
+
+  gsap.ticker.add(renderScrollBar)
 })
 
 onUnmounted(() => {
+  // Stop rendering the scrollbar
+  gsap.ticker.remove(renderScrollBar)
+
   // Reset scroll position
   scrollY.value = 0
   scrollYMax.value = 0

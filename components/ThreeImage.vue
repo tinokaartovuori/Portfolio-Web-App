@@ -1,13 +1,18 @@
 <template>
-  <img ref="threeImg" :src="imageUrl" class="invisible" />
+  <img
+    ref="threeImg"
+    :src="imageUrl"
+    :alt="alt"
+    class="opacity-0"
+    crossorigin="anonymous"
+    decoding="async"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
 const threeObjectStateStore = useThreeObjectStateStore()
-const threeObjectState = storeToRefs(threeObjectStateStore)
 
 const props = defineProps({
   imageUrl: {
@@ -17,6 +22,10 @@ const props = defineProps({
   threeReference: {
     type: String,
     required: true,
+  },
+  alt: {
+    type: String,
+    default: '',
   },
 })
 

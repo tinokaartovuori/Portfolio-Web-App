@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
@@ -13,7 +13,7 @@ const scrollStateStore = useScrollStateStore()
 const { scrollY } = storeToRefs(scrollStateStore)
 
 const scrollToDiscoverVisible = ref(true)
-const { width, height } = useWindowSize()
+const { height } = useWindowSize()
 
 watch(scrollY, () => {
   if (scrollY.value > height.value / 3) {

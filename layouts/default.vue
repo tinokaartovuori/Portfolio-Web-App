@@ -1,5 +1,5 @@
 <template>
-  <main class="h-full w-full" @touchstart="touchstart" @touchmove="touchmove">
+  <main class="h-full w-full">
     <div id="app-wrapper" class="relative h-full">
       <header>
         <TopBar class="z-50" />
@@ -15,17 +15,3 @@
     </div>
   </main>
 </template>
-
-<script setup lang="ts">
-// These are added to prevent pinch zooming on mobile
-function touchstart(e: TouchEvent) {
-  if (e.touches.length > 1) {
-    e.preventDefault()
-  }
-}
-function touchmove(e: TouchEvent) {
-  if (e.touches.length > 1) {
-    e.preventDefault()
-  }
-}
-</script>

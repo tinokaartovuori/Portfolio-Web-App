@@ -10,6 +10,11 @@ body {
 
 html {
   overflow: hidden;
+  background-color: #dde0ed;
+}
+
+html.dark {
+  background-color: #0c0d12;
 }
 
 html * {
@@ -19,11 +24,9 @@ html * {
   transition-duration: 600ms;
 }
 
-body {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+:focus-visible {
+  outline: 2px solid #ec4899;
+  outline-offset: 4px;
 }
 
 #__nuxt {

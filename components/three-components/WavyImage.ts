@@ -4,6 +4,7 @@ import {
   Vector2,
   PlaneGeometry,
   TextureLoader,
+  Texture,
   ShaderMaterial,
   DoubleSide,
   MeshBasicMaterial,
@@ -26,7 +27,7 @@ export default class WavyImage3D extends Object3D {
   scrollSpeedCurrent: number
   smoothingFactor: number
 
-  imageTexture: TextureLoader
+  imageTexture: Texture
   shaderUniforms: any
 
   /**
@@ -46,8 +47,12 @@ export default class WavyImage3D extends Object3D {
     this.scrollSpeedCurrent = 0
     this.smoothingFactor = 0.2
 
-    this.shaderUniforms = {}
-    this.createMeshObject()
+    const { planeGeometry, imageTexture, shaderUniforms, shaderMaterial } =
+      this.createMeshObject()
+    this.planeGeometry = planeGeometry
+    this.imageTexture = imageTexture
+    this.shaderUniforms = shaderUniforms
+    this.shaderMaterial = shaderMaterial
   }
 
   /**
@@ -65,15 +70,16 @@ export default class WavyImage3D extends Object3D {
 
   /**
    * Creates the mesh object
+   * @returns The geometry, texture, uniforms and material it was built from
    */
   createMeshObject() {
     this.calculateDimensions()
-    this.planeGeometry = new PlaneGeometry(1, 1, 30, 30)
-    this.imageTexture = new TextureLoader().load(this.imageElement.src)
+    const planeGeometry = new PlaneGeometry(1, 1, 30, 30)
+    const imageTexture = new TextureLoader().load(this.imageElement.src)
 
     // Set shader uniforms
-    this.shaderUniforms = {
-      uTexture: { value: this.imageTexture },
+    const shaderUniforms = {
+      uTexture: { value: imageTexture },
       uScrollSpeed: { value: new Vector2(0, 0) },
       uAlpha: { value: 1 },
       uPlaneYPosition: { value: 0 },
@@ -82,7 +88,7 @@ export default class WavyImage3D extends Object3D {
     }
 
     // Create shader material
-    this.shaderMaterial = new ShaderMaterial({
+    const shaderMaterial = new ShaderMaterial({
       vertexShader: `
       // Define uniforms
       uniform sampler2D uTexture;
@@ -158,15 +164,17 @@ export default class WavyImage3D extends Object3D {
         gl_FragColor = vec4(color, uAlpha);
       }
       `,
-      uniforms: this.shaderUniforms,
-      transparent: true,
+      uniforms: shaderUniforms,
+      transparent: false,
       side: DoubleSide,
     })
 
-    this.meshObject.geometry = this.planeGeometry
-    this.meshObject.material = this.shaderMaterial
+    this.meshObject.geometry = planeGeometry
+    this.meshObject.material = shaderMaterial
     this.meshObject.scale.set(this.dimensions.x, this.dimensions.y, 1)
     this.add(this.meshObject)
+
+    return { planeGeometry, imageTexture, shaderUniforms, shaderMaterial }
   }
 
   /**
@@ -201,10 +209,11 @@ export default class WavyImage3D extends Object3D {
   }
 
   /**
-   * Dispose the mesh geometry and material
+   * Dispose the mesh geometry, material and texture
    */
   dispose() {
-    this.meshObject.geometry.dispose()
-    this.meshObject.material.dispose()
+    this.planeGeometry.dispose()
+    this.shaderMaterial.dispose()
+    this.imageTexture.dispose()
   }
 }

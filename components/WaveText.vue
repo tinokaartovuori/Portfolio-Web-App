@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import gsap from 'gsap'
+import { gsap } from 'gsap'
 
 const props = defineProps({
   text: {
@@ -33,6 +33,7 @@ const props = defineProps({
 
 const mouseIn = ref<Boolean>(false)
 let animationPlaying = false
+let prefersReducedMotion = false
 
 const textDivs = ref<HTMLElement[]>([])
 
@@ -53,6 +54,12 @@ const timeline = gsap.timeline({
 })
 
 onMounted(() => {
+  prefersReducedMotion = window.matchMedia(
+    '(prefers-reduced-motion: reduce)',
+  ).matches
+  // Nothing pulses for visitors who asked for reduced motion
+  if (prefersReducedMotion) return
+
   // Put every div in a timeline with 100ms delay from each
   textDivs.value.forEach((div, index) => {
     // Creating an animation to timeline where opacity is pulsing from 1 to 0.5 and back up
@@ -88,6 +95,7 @@ onMounted(() => {
 watch(
   () => mouseIn.value,
   (value) => {
+    if (prefersReducedMotion) return
     if (!value) return
     if (!props.onHover) return
     if (animationPlaying) return

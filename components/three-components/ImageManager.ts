@@ -20,7 +20,10 @@ export default class ImageManager {
   }
 
   removeImages() {
-    this.images.forEach((image) => this.scene.remove(image))
+    this.images.forEach((image) => {
+      this.scene.remove(image)
+      image.dispose()
+    })
     this.images = []
   }
 

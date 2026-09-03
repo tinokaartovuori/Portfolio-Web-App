@@ -12,7 +12,6 @@ This project is built using the following technologies:
 - TypeScript: A typed superset of JavaScript that adds optional static typing to the language
 - TailwindCSS: A utility-first CSS framework
 - Three.js: A JavaScript library for creating 3D animations and visualizations
-- Docker: A platform for developing, shipping, and running applications
 
 ## Commands
 
@@ -23,17 +22,7 @@ This project is built using the following technologies:
 - `npm run postinstall`: Runs automatically after installation to prepare the project for development
 - `npm run format`: Runs Prettier and formats all project files to correct style
 
-## Docker Development Setup
-
-To set up this project with Docker, first, make sure you have Docker installed on your machine. Then, you can build the Docker image with the following command:
-
-```bash
-docker-compose up
-```
-
-With this setup, any changes you make to your project files on your local machine will be immediately reflected inside the Docker container, and your application will automatically reload with the new changes.
-
-## Usage Without Docker
+## Usage
 
 To run this project locally, clone the repository and install the dependencies by running:
 `npm install`
@@ -46,7 +35,7 @@ Then you can use the commands listed above to run the project in development mod
   <summary>26.1.2023</summary>
   </br>
 
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-01-26-portfolio-ui.gif)
+![](documentation/progress/gifs/2023-01-26-portfolio-ui.gif)
 
 Added some nice sticky UI elements. Three.js scene will be added as background later and on top of that there will be scrollable HTML content. The scroll will be synced between the Three.js scene and HTML content and it will make a very cool effect.
 
@@ -58,7 +47,7 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
   <summary>1.2.2023</summary>
   </br>
 
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-01-portfolio-ui.gif)
+![](documentation/progress/gifs/2023-02-01-portfolio-ui.gif)
 
 - [x] Implemented dark and light mode (`TailwindCSS` and `@nuxtjs/color-mode`)
 - [x] Added test canvas
@@ -71,7 +60,7 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
   <summary>4.2.2023</summary>
   </br>
 
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-04-portfolio-ui.gif)
+![](documentation/progress/gifs/2023-02-04-portfolio-ui.gif)
 
 - [x] Replaced the previous canvas with Three.js version and made a prototype rounded rectangle in the scene that moves with the scroll
 - [x] Made a fun custom scrollbar track
@@ -84,7 +73,7 @@ Z-layer: `Sticky UI Elements` <- ( `HTML Content` <- `Three.js Scene` ) < These 
   <summary>7.2.2023</summary>
   </br>
 
-![](https://github.com/tinokaartovuori/my-portfolio/blob/main/documentation/progress/gifs/2023-02-07-portfolio-ui.gif)
+![](documentation/progress/gifs/2023-02-07-portfolio-ui.gif)
 
 - [x] Replaced orthographic camera with a perspective one
 - [x] Refactored Three.js scene, camera and renderer to one scenario object

@@ -1,10 +1,20 @@
 import { Object3D, Scene } from 'three'
 import { IntroRectangle } from './IntroRectangle'
-import { CrazyPlane } from './CrazyPlane'
+
+/**
+ * An Object3D that is pinned to a DOM element and therefore has to expose the
+ * full lifecycle that ElementManager drives.
+ */
+export interface TrackedObject3D extends Object3D {
+  update(): void
+  updatePosition(): void
+  updateAspectRatio(): void
+  dispose(): void
+}
 
 export default class ElementManager {
   scene: Scene
-  elements: Object3D[]
+  elements: TrackedObject3D[]
 
   constructor(scene: Scene) {
     this.elements = []
@@ -25,14 +35,6 @@ export default class ElementManager {
         this.elements.push(introRectangle)
         this.scene.add(introRectangle)
         introRectangle.update()
-        continue
-      }
-
-      if (objectType === 'CrazyPlane') {
-        const crazyPlane = new CrazyPlane(objectElement as HTMLImageElement)
-        this.elements.push(crazyPlane)
-        this.scene.add(crazyPlane)
-        crazyPlane.update()
         continue
       }
 

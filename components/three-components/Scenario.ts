@@ -1,4 +1,4 @@
-import { Scene, WebGLRenderer, Clock, Color, PerspectiveCamera } from 'three'
+import { Scene, WebGLRenderer, Color, PerspectiveCamera } from 'three'
 
 export default class Scenario {
   scene: Scene
@@ -7,7 +7,6 @@ export default class Scenario {
   fov: number
   aspectRatio: number
   renderer: WebGLRenderer
-  clock: Clock
 
   width: number
   height: number
@@ -21,7 +20,7 @@ export default class Scenario {
     this.fov =
       (180 * (2 * Math.atan(this.height / 2 / this.perspective))) / Math.PI
     this.aspectRatio = this.width / this.height
-    this.camera = new PerspectiveCamera(this.fov, this.aspectRatio, 0.1, 2000)
+    this.camera = new PerspectiveCamera(this.fov, this.aspectRatio, 1, 2000)
     this.camera.position.set(0, 0, this.perspective)
 
     this.renderer = new WebGLRenderer({
@@ -30,9 +29,16 @@ export default class Scenario {
     })
     this.renderer.setClearColor(new Color(0xffffff), 0)
     this.renderer.setSize(this.width, this.height)
-    this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.updatePixelRatio()
+  }
 
-    this.clock = new Clock()
+  /**
+   * Applies the device pixel ratio, capped to keep the fragment cost sane on
+   * high density displays and lower still on touch devices
+   */
+  private updatePixelRatio() {
+    const maxRatio = window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxRatio))
   }
 
   updateCameraSize(width: number, height: number) {
@@ -45,6 +51,7 @@ export default class Scenario {
 
   updateRendererSize(width: number, height: number) {
     this.renderer.setSize(width, height)
+    this.updatePixelRatio()
   }
 
   render() {
