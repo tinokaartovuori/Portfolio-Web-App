@@ -4,6 +4,7 @@ import {
   Vector2,
   PlaneGeometry,
   TextureLoader,
+  SRGBColorSpace,
   Texture,
   ShaderMaterial,
   DoubleSide,
@@ -76,6 +77,7 @@ export default class WavyImage3D extends Object3D {
     this.calculateDimensions()
     const planeGeometry = new PlaneGeometry(1, 1, 30, 30)
     const imageTexture = new TextureLoader().load(this.imageElement.src)
+    imageTexture.colorSpace = SRGBColorSpace
 
     // Set shader uniforms
     const shaderUniforms = {
@@ -162,6 +164,12 @@ export default class WavyImage3D extends Object3D {
 
         vec3 color = texture2D(uTexture, newUV).rgb;
         gl_FragColor = vec4(color, uAlpha);
+
+        // The texture is decoded to linear on sample (colorSpace = SRGBColorSpace),
+        // so the result has to be encoded back to the renderer's output space here.
+        // This include and that colorSpace assignment are a pair — one without the
+        // other double-encodes or double-decodes the image.
+        #include <colorspace_fragment>
       }
       `,
       uniforms: shaderUniforms,

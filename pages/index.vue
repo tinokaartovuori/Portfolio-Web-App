@@ -35,10 +35,7 @@
     </ElementTracker>
     <div class="mb-32 flex h-full w-full flex-col px-[12%] md:flex-row">
       <a>
-        <ThreeImage
-          threeReference="testImage"
-          imageUrl="//live.staticflickr.com/65535/51289089076_825c2258b3_h.jpg"
-        />
+        <ThreeImage threeReference="testImage" imageUrl="/images/work-01.png" />
       </a>
       <div class="flex h-auto w-full flex-col content-between justify-between">
         <span class="text-2xl text-onyx dark:text-platinum">Test Image</span>
@@ -53,7 +50,7 @@
       <a>
         <ThreeImage
           threeReference="testImage2"
-          imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
+          imageUrl="/images/work-02.png"
         />
       </a>
     </div>
@@ -65,7 +62,7 @@
       <a>
         <ThreeImage
           threeReference="testImage3"
-          imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
+          imageUrl="/images/work-03.png"
         />
       </a>
     </div>
@@ -77,7 +74,7 @@
       <a>
         <ThreeImage
           threeReference="testImage4"
-          imageUrl="//live.staticflickr.com/65535/52073317079_1d607ae166_h.jpg"
+          imageUrl="/images/work-04.png"
         />
       </a>
     </div>
