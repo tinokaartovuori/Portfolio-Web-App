@@ -105,3 +105,6 @@ dist
 
 # Mac file-system
 .DS_Store
+
+# Playwright MCP artifacts
+.playwright-mcp/

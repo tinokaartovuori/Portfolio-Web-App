@@ -6,7 +6,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "nuxt typecheck"
   },
   "devDependencies": {
     "@nuxtjs/google-fonts": "^3.0.0-1",
@@ -16,7 +17,9 @@
     "prettier": "^2.8.8",
     "prettier-plugin-tailwindcss": "^0.2.2",
     "three": "^0.149.0",
-    "vite-svg-loader": "^4.0.0"
+    "typescript": "~5.9",
+    "vite-svg-loader": "^4.0.0",
+    "vue-tsc": "^2.2.12"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^3.2.0",
@@ -28,5 +31,8 @@
     "smooth-scrollbar": "^8.8.1",
     "tslib": "^2.5.2",
     "url": "^0.11.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
