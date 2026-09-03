@@ -15,7 +15,8 @@ export default class ImageManager {
       const image = new WavyImage(imageElement as HTMLImageElement)
       this.images.push(image)
       this.scene.add(image)
-      image.update(0)
+      // Place it once at rest; the frame loop takes over from the next tick
+      image.update(0, 0)
     }
   }
 
@@ -27,7 +28,11 @@ export default class ImageManager {
     this.images = []
   }
 
-  updateImages(scrollYSpeed: number) {
-    this.images.forEach((image) => image.update(scrollYSpeed))
+  /**
+   * @param scrollYVelocity Vertical scroll velocity in pixels per second
+   * @param dt Seconds since the previous frame
+   */
+  updateImages(scrollYVelocity: number, dt: number) {
+    this.images.forEach((image) => image.update(scrollYVelocity, dt))
   }
 }

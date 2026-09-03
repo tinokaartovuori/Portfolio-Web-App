@@ -28,14 +28,33 @@
   --font-outfit: 'Outfit', sans-serif;
 }
 
+/*
+ * The page scrolls natively. It used to be pinned with position: fixed and
+ * overflow: hidden so a forked scrollbar could transform a wrapper, which broke
+ * keyboard scrolling, find-in-page, anchor links and scroll restoration.
+ * Lenis smooths the real scroll position instead.
+ */
 html,
 body {
-  position: fixed;
   width: 100%;
-  height: 100%;
-  top: 0;
-  bottom: 0;
-  height: -webkit-fill-available;
+  min-height: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+/*
+ * ScrollTrack draws the visible scroll affordance, so the OS one is hidden.
+ * Scrolling itself is still native, so the keyboard, find-in-page and scroll
+ * restoration are unaffected.
+ */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 /*
@@ -44,7 +63,6 @@ body {
  * flash before hydration. color-mode stamps the class before first paint.
  */
 html {
-  overflow: hidden;
   background-color: #dde0ed;
 }
 
@@ -71,6 +89,27 @@ html * {
 }
 
 #__nuxt {
-  height: 100%;
   display: block;
+}
+
+/* Visible only while focused, as the first tab stop on the page. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  border-radius: 0.25rem;
+  background-color: #0c0d12;
+  color: #dde0ed;
+  transform: translateY(-200%);
+}
+
+html.dark .skip-link {
+  background-color: #dde0ed;
+  color: #0c0d12;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }

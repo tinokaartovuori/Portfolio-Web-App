@@ -1,6 +1,6 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 top-0 bg-platinum dark:bg-onyx">
-    <canvas ref="threeCanvas" class="absolute bottom-0 left-0 right-0 top-0" />
+  <div class="fixed inset-0 z-0 bg-platinum dark:bg-onyx">
+    <canvas ref="threeCanvas" class="absolute inset-0" aria-hidden="true" />
   </div>
 </template>
 
@@ -13,17 +13,15 @@ import type { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
-import { useScrollStateStore } from '~/store/scrollState'
 import { useWindowSize } from '@vueuse/core'
+import { onFrame } from '~/composables/useFrameLoop'
+import { scrollFrame } from '~/composables/useSmoothScroll'
 
 // Trailing debounce for window resizes, so a drag only rebuilds once it settles
 const resizeDebounce = 100
 
 const threeObjectState = useThreeObjectStateStore()
-const scrollState = useScrollStateStore()
-
 const { threeElementTracker, threeImageTracker } = storeToRefs(threeObjectState)
-const { scrollY, scrollYSpeed } = storeToRefs(scrollState)
 
 const { width, height } = useWindowSize()
 const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
@@ -33,8 +31,8 @@ let scenario: Scenario | null = null
 let imageManager: ImageManager | null = null
 let elementManager: ElementManager | null = null
 
-let frameId: number | null = null
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
+const stopFrame: Array<() => void> = []
 
 onMounted(() => {
   if (!threeCanvas.value) return
@@ -45,14 +43,27 @@ onMounted(() => {
 
   imageManager.loadImages(threeImageTracker.value)
   elementManager.loadElements(threeElementTracker.value)
-  loop() // Start the animation loop
+
+  /*
+   * Both stages run every frame, in this order, from the one shared clock.
+   * They used to be a Vue watcher on scrollY and a private requestAnimationFrame
+   * respectively — so mesh state only advanced when the scroll value changed
+   * (freezing the deformation mid-decay the moment scrolling stopped) and the
+   * draw could happen before or after the transform depending on mount order.
+   */
+  stopFrame.push(
+    onFrame('transform', (dt) => {
+      if (!imageManager || !elementManager) return
+      imageManager.updateImages(scrollFrame.velocity, dt)
+      elementManager.updateElementPositions()
+    }),
+    onFrame('render', () => scenario?.render()),
+  )
 })
 
 onUnmounted(() => {
-  if (frameId !== null) {
-    cancelAnimationFrame(frameId)
-    frameId = null
-  }
+  for (const stop of stopFrame) stop()
+  stopFrame.length = 0
 
   if (resizeTimeout !== null) {
     clearTimeout(resizeTimeout)
@@ -63,7 +74,6 @@ onUnmounted(() => {
   elementManager?.removeElements()
   scenario?.renderer.dispose()
 
-  // Nulling these also stops the animation loop from picking up another frame
   imageManager = null
   elementManager = null
   scenario = null
@@ -80,13 +90,6 @@ watch([width, height], () => {
   }, resizeDebounce)
 })
 
-watch(scrollY, () => {
-  if (!imageManager || !elementManager) return
-
-  imageManager.updateImages(scrollYSpeed.value)
-  elementManager.updateElementPositions()
-})
-
 watch(threeObjectState, () => {
   if (!imageManager || !elementManager) return
 
@@ -99,18 +102,10 @@ watch(threeObjectState, () => {
 const resize = () => {
   if (!scenario || !imageManager || !elementManager) return
 
-  imageManager.updateImages(scrollYSpeed.value)
+  imageManager.updateImages(scrollFrame.velocity, 0)
   elementManager.updateElements()
 
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)
-}
-
-const loop = () => {
-  if (!scenario) return
-
-  frameId = requestAnimationFrame(loop)
-
-  scenario.render() // Render the scene
 }
 </script>

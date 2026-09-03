@@ -10,6 +10,30 @@ import {
   DoubleSide,
   MeshBasicMaterial,
 } from 'three'
+import { damp } from '~/composables/useFrameLoop'
+
+/**
+ * Decay rate of the scroll-speed smoothing, per second.
+ * Ported from the previous per-frame factor of 0.2 tuned at 60fps:
+ * lambda = -60 * ln(1 - 0.2).
+ */
+const SPEED_SMOOTHING = 13.386
+
+/**
+ * Peak deformation offset. The vertex shader multiplies this by ~1200 to get a
+ * z displacement, and the camera sits at z=1000 — so 0.1 is about a 12% depth
+ * swing across the plane, which reads as a bend. The original linear mapping
+ * could reach 0.27 on a fast flick, skewing the plane into a trapezoid that
+ * visibly tore away from the DOM box it is pinned to.
+ */
+const MAX_DEFORMATION = 0.1
+
+/**
+ * Velocity (px/s) at which the deformation reaches ~76% of its peak. Below
+ * this the response is near-linear; above it, it saturates smoothly instead of
+ * growing without bound.
+ */
+const DEFORMATION_VELOCITY_SCALE = 2000
 
 /**
  * Class representing a wavy image in 3D space using THREE.js library
@@ -26,7 +50,6 @@ export default class WavyImage3D extends Object3D {
 
   scrollSpeedTarget: number
   scrollSpeedCurrent: number
-  smoothingFactor: number
 
   imageTexture: Texture
   shaderUniforms: any
@@ -46,7 +69,6 @@ export default class WavyImage3D extends Object3D {
 
     this.scrollSpeedTarget = 0
     this.scrollSpeedCurrent = 0
-    this.smoothingFactor = 0.2
 
     const { planeGeometry, imageTexture, shaderUniforms, shaderMaterial } =
       this.createMeshObject()
@@ -129,7 +151,11 @@ export default class WavyImage3D extends Object3D {
         position.y = position.y + (sin(uv.x * M_PI) * offset.y) * 0.2;
 
         float direction = offset.y > 0.0 ? 1.0 : -1.0;
-        position.z = position.z + curveEffectMatching(uv.y, direction) * 60.0 * offset.y - abs(offset.y) * 500.0;
+        // The pull-back is clamped: unclamped, a fast scroll pushed the plane
+        // 200 units away from a camera at z=1000, shrinking it ~17% and visibly
+        // detaching it from the DOM box it is supposed to be pinned to.
+        float pullBack = min(abs(offset.y) * 500.0, 120.0);
+        position.z = position.z + curveEffectMatching(uv.y, direction) * 60.0 * offset.y - pullBack;
 
         return position;
       }
@@ -146,7 +172,6 @@ export default class WavyImage3D extends Object3D {
       uniform float uAlpha;
       uniform vec2 uScrollSpeed;
       uniform float uPlaneYPosition; 
-      uniform float uRelativePlaneYSize;
       varying vec2 vUv;
 
       // Function for RGB shift
@@ -159,10 +184,13 @@ export default class WavyImage3D extends Object3D {
       void main() {
         vec2 newUV = vUv - vec2(0.0, (uPlaneYPosition / 2.0) * 0.30);
 
-        // Scale the texture by 1.2 bigger and keep it in the center
-        newUV = newUV * 0.9 + vec2(0.075, 0.075);
+        // Zoom ~1.11x, centred. The old offset of 0.075 mapped [0,1] to
+        // [0.075, 0.975], i.e. centred on 0.525 — every image sat 2.5% high.
+        newUV = newUV * 0.9 + vec2(0.05, 0.05);
 
-        vec3 color = texture2D(uTexture, newUV).rgb;
+        // Chromatic aberration proportional to scroll speed. rgbShift was
+        // defined here from the start but never called.
+        vec3 color = rgbShift(uTexture, newUV, vec2(0.0, uScrollSpeed.y * 0.06));
         gl_FragColor = vec4(color, uAlpha);
 
         // The texture is decoded to linear on sample (colorSpace = SRGBColorSpace),
@@ -186,13 +214,14 @@ export default class WavyImage3D extends Object3D {
   }
 
   /**
-   * Updates the mesh object based on scroll speed
-   * @param {number} scrollYSpeed - The vertical scroll speed
+   * Updates the mesh object based on scroll velocity
+   * @param {number} scrollYVelocity - Vertical scroll velocity in pixels per second
+   * @param {number} dt - Seconds since the previous frame
    */
-  update(scrollYSpeed: number) {
+  update(scrollYVelocity: number, dt: number) {
     this.calculateDimensions()
 
-    this.scrollSpeedTarget = scrollYSpeed
+    this.scrollSpeedTarget = scrollYVelocity
 
     // Update mesh position and scale
     this.meshObject.position.x = this.positionOffset.x
@@ -206,13 +235,28 @@ export default class WavyImage3D extends Object3D {
     this.shaderUniforms.uPlaneRelativeYSize.value =
       this.dimensions.y / window.innerHeight
 
-    // Smooth scroll speed
-    this.scrollSpeedCurrent +=
-      (this.scrollSpeedTarget - this.scrollSpeedCurrent) * this.smoothingFactor
+    // Smooth the velocity per second rather than per frame, so the effect has
+    // the same strength at 60, 120 and 144Hz
+    this.scrollSpeedCurrent = damp(
+      this.scrollSpeedCurrent,
+      this.scrollSpeedTarget,
+      SPEED_SMOOTHING,
+      dt,
+    )
+
+    /*
+     * Soft saturation rather than a linear scale: normal scrolling gets a
+     * proportional response, and a hard flick tops out at MAX_DEFORMATION
+     * instead of turning the plane inside out.
+     */
+    const deformation =
+      MAX_DEFORMATION *
+      Math.tanh(this.scrollSpeedCurrent / DEFORMATION_VELOCITY_SCALE)
 
     this.shaderUniforms.uScrollSpeed.value.set(
-      this.positionOffset.x * 0.0,
-      -this.scrollSpeedCurrent * 0.004,
+      // No horizontal scrolling exists, so the x deformation stays disabled
+      0,
+      -deformation,
     )
   }
 

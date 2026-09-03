@@ -29,23 +29,33 @@ Note: `Dockerfile` pins `node:14-alpine`, which is too old to actually run Nuxt 
 
 ## Architecture
 
-The whole site is one idea: **a Three.js scene rendered behind the DOM, whose meshes are pinned 1:1 to the on-screen positions of real HTML elements, driven by a custom (non-native) scrollbar.** Understanding that pipeline is most of understanding this codebase.
+The whole site is one idea: **a Three.js scene rendered behind the DOM, whose meshes are pinned 1:1 to the on-screen positions of real HTML elements, advanced by one shared clock.** Understanding that pipeline is most of understanding this codebase.
 
-### 1. Scroll is virtual, not native
+### 1. One clock drives everything
 
-`assets/styles/index.css` fixes `html`/`body` and sets `overflow: hidden`. Nothing scrolls natively. All scrollable content must live inside `<ScrollContainer>` (both pages wrap their entire template in it).
+`composables/useFrameLoop.ts` owns the single `gsap.ticker` callback and runs registered callbacks in a fixed order every frame:
 
-`components/ScrollContainer.vue` initializes `@tinokaartovuori/smooth-scrollbar` — a **fork** of smooth-scrollbar that adds the `externalRAF` option. Because of `externalRAF: true`, the scrollbar does not render itself; `ScrollContainer` calls `scrollBar.render()` from a `gsap.ticker` callback. That is deliberate: one GSAP clock drives scroll so scroll position and the WebGL frame can't desync.
+1. `scroll` — advance Lenis, publish position and velocity
+2. `transform` — measure and place meshes against the position scroll just produced
+3. `render` — draw
 
-Custom scrollbar plugins live in `smooth-scrollbar-plugins/`:
+Register with `onFrame(stage, cb)` (returns an unregister) or `useFrame(stage, cb)` (unregisters on unmount). **Never add your own `requestAnimationFrame` or `gsap.ticker.add` for anything that has to agree with scroll position** — that is exactly the desync this replaced.
 
-- `speedControl.ts` — clamps/scales wheel delta (registered and in use).
+`dt` is in seconds and clamped to 1/30. `damp(current, target, lambda, dt)` from the same module is the only easing helper you should use; `x += (target - x) * k` decays per _frame_ and so behaves differently at 60, 120 and 144 Hz.
 
-The native scrollbar tracks are removed in `ScrollContainer`; `components/ScrollTrack.vue` draws the visible custom track/indicator from store state via `gsap.ticker`.
+### 2. Scrolling is native, smoothed by Lenis
+
+The page scrolls natively. `components/ScrollContainer.vue` creates a Lenis instance (`composables/useSmoothScroll.ts`) with `autoRaf: false` and drives it from the frame loop's `scroll` stage. Keyboard, find-in-page, anchors, scroll restoration and pinch zoom therefore all work without any code.
+
+`composables/useSmoothScroll.ts` also exports `scrollFrame` — a **plain, non-reactive** `{ y, velocity, max }`. The WebGL layer reads this directly; Vue reactivity does not belong in a 120 Hz path. `velocity` is in **pixels per second**.
+
+Under `prefers-reduced-motion: reduce`, Lenis is created with `lerp: 1` and `smoothWheel: false`, i.e. plain native scrolling.
+
+The OS scrollbar is hidden in CSS; `components/ScrollTrack.vue` draws the visible track/indicator from store state in the frame loop's `render` stage.
 
 ### 2. Pinia stores are the bus between DOM and WebGL
 
-- `store/scrollState.ts` — `scrollY`, `scrollYSpeed`, `scrollYMax`. Written only by `ScrollContainer` (both the scrollbar listener and the overscroll plugin callback); read by everything that reacts to scroll (`ThreeScrollCanvas`, `ScrollTrack`, `BottomBar`).
+- `store/scrollState.ts` — `scrollY`, `scrollYVelocity` (**pixels per second**), `scrollYMax`. Mirrored once per frame from `scrollFrame` by `ScrollContainer`, for the _reactive_ consumers only (`ScrollTrack`, `BottomBar`). `ThreeScrollCanvas` does not read it.
 - `store/threeObjectState.ts` — registry of DOM elements that want a 3D counterpart: `threeElementTracker` (element + object-type string) and `threeImageTracker` (image elements). `reset()` clears both; `remove(threeReference)` drops a single entry (used by `ElementTracker`'s unmount hook).
 
 ### 3. Registering DOM elements for WebGL
@@ -67,12 +77,13 @@ The registry is global and keyed by `threeReference`, so **every page must call 
 
 Update flow, all via `watch`:
 
-- `watch(scrollY)` → `imageManager.updateImages(scrollYSpeed)` + `elementManager.updateElementPositions()`
+- `onFrame('transform')` → `imageManager.updateImages(scrollFrame.velocity, dt)` + `elementManager.updateElementPositions()`
+- `onFrame('render')` → `scenario.render()`
 - `watch([width, height])` (from `useWindowSize`, 100ms trailing debounce) → full update + camera/renderer resize
 - `watch(threeObjectState)` → tear down and rebuild all meshes (page navigation)
-- `onUnmounted` → cancel the rAF, drop every mesh and dispose the renderer
+- `onUnmounted` → unregister both frame callbacks, drop every mesh and dispose the renderer
 
-`scenario.render()` runs in its own `requestAnimationFrame` loop, separate from the GSAP ticker that drives the scrollbar.
+The canvas wrapper is `fixed inset-0 z-0`; page content sits above it at `z-10`. Nothing here relies on a third-party stylesheet for stacking any more.
 
 ### 5. Positioning convention for 3D objects
 

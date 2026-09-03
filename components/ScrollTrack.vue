@@ -1,7 +1,7 @@
 <template>
   <div
     ref="track"
-    class="absolute bottom-0 right-0 top-0 w-0.5 bg-onyx dark:bg-neutral-800 xs:w-1 sm:w-1.5"
+    class="fixed bottom-0 right-0 top-0 z-40 w-0.5 bg-onyx/15 dark:bg-platinum/20 xs:w-1 sm:w-1.5"
   >
     <div
       ref="indicator"
@@ -16,6 +16,7 @@ import { gsap } from 'gsap'
 import { storeToRefs } from 'pinia'
 import { useWindowSize } from '@vueuse/core'
 import { useScrollStateStore } from '~/store/scrollState'
+import { onFrame } from '~/composables/useFrameLoop'
 const scrollStateStore = useScrollStateStore()
 const { scrollY, scrollYMax } = storeToRefs(scrollStateStore)
 
@@ -28,6 +29,7 @@ const { height: windowHeight } = useWindowSize()
 let trackHeight = 0
 let indicatorHeight = 0
 let setIndicatorY: ((value: number) => void) | null = null
+let stopFrame: (() => void) | null = null
 
 /* scrollYMax is 0 before the first scroll event and after every navigation,
  * so the indicator is collapsed instead of dividing by zero. */
@@ -61,11 +63,13 @@ onMounted(() => {
   }
   updateIndicatorHeight()
   updateIndicatorPosition()
-  gsap.ticker.add(updateIndicatorPosition)
+  // Runs in the shared frame loop's render stage, after scroll has advanced
+  stopFrame = onFrame('render', updateIndicatorPosition)
 })
 
 onUnmounted(() => {
-  gsap.ticker.remove(updateIndicatorPosition)
+  stopFrame?.()
+  stopFrame = null
 })
 </script>
 

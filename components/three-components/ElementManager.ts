@@ -50,7 +50,7 @@ export default class ElementManager {
     this.elements = []
   }
 
-  updateElements(scrollYSpeed: number = 0) {
+  updateElements() {
     this.elements.forEach((element) => element.update())
   }
 
