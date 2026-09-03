@@ -1,3 +1,33 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind 4 has no `darkMode: 'class'` key. @nuxtjs/color-mode is configured
+ * with classSuffix: '' so it stamps a bare `dark` class on <html>; without this
+ * variant every `dark:` utility silently stops tracking the theme switch.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /*
+   * The old tailwind.config.ts *replaced* `screens` rather than extending it,
+   * so the defaults have to be cleared before redeclaring them — otherwise the
+   * site gains a 2xl breakpoint it never had.
+   */
+  --breakpoint-*: initial;
+  --breakpoint-xxs: 320px;
+  --breakpoint-xs: 450px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  --color-onyx: #0c0d12;
+  --color-platinum: #dde0ed;
+
+  --font-sans: 'Outfit', sans-serif;
+  --font-outfit: 'Outfit', sans-serif;
+}
+
 html,
 body {
   position: fixed;
@@ -8,6 +38,11 @@ body {
   height: -webkit-fill-available;
 }
 
+/*
+ * Painted on <html> as well as on the canvas wrapper: the wrapper lives inside
+ * <ClientOnly>, so without this a dark-mode visitor gets a full-viewport white
+ * flash before hydration. color-mode stamps the class before first paint.
+ */
 html {
   overflow: hidden;
   background-color: #dde0ed;
@@ -18,10 +53,16 @@ html.dark {
 }
 
 html * {
-  transition-property: color, background-color, border-color,
-    text-decoration-color, fill, stroke;
+  transition-property:
+    color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 600ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html * {
+    transition-duration: 1ms;
+  }
 }
 
 :focus-visible {

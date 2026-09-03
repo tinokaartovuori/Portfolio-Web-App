@@ -31,7 +31,7 @@ const props = defineProps({
   },
 })
 
-const mouseIn = ref<Boolean>(false)
+const mouseIn = ref(false)
 let animationPlaying = false
 let prefersReducedMotion = false
 
@@ -94,7 +94,7 @@ onMounted(() => {
 
 watch(
   () => mouseIn.value,
-  (value: boolean) => {
+  (value) => {
     if (prefersReducedMotion) return
     if (!value) return
     if (!props.onHover) return
