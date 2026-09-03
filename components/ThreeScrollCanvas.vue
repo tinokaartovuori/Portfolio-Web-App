@@ -9,7 +9,7 @@ import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
 import ElementManager from './three-components/ElementManager'
 
-import { Ref } from 'vue'
+import type { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useThreeObjectStateStore } from '~/store/threeObjectState'

@@ -94,7 +94,7 @@ onMounted(() => {
 
 watch(
   () => mouseIn.value,
-  (value) => {
+  (value: boolean) => {
     if (prefersReducedMotion) return
     if (!value) return
     if (!props.onHover) return

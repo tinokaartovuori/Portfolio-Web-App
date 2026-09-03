@@ -3,6 +3,13 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  // Pin the behaviour date so a build cannot differ between two machines
+  compatibilityDate: '2026-09-04',
+  future: {
+    // Opt into Nuxt 4 defaults while still on 3.x, so breakages arrive one at a
+    // time rather than all at once with the major bump
+    compatibilityVersion: 4,
+  },
   css: ['~/assets/styles/index.css'],
   components: true,
   modules: [

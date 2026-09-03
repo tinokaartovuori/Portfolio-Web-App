@@ -6,9 +6,9 @@ import { ScrollbarPlugin } from '@tinokaartovuori/smooth-scrollbar'
 import type { Data2d } from '@tinokaartovuori/smooth-scrollbar/interfaces'
 
 class SpeedControlPlugin extends ScrollbarPlugin {
-  static pluginName = 'speedControl'
+  static override pluginName = 'speedControl'
 
-  static defaultOptions = {
+  static override defaultOptions = {
     speed: 1,
     maxSpeed: 1200,
   }
@@ -17,7 +17,7 @@ class SpeedControlPlugin extends ScrollbarPlugin {
     return Math.min(Math.max(num, min), max)
   }
 
-  transformDelta(delta: Data2d) {
+  override transformDelta(delta: Data2d) {
     const { speed, maxSpeed } = this.options
 
     return {
