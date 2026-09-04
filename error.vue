@@ -13,7 +13,7 @@
       {{ message }}
     </h1>
     <button
-      class="mt-12 border-b-2 border-pink-500 pb-1 text-sm font-light text-onyx dark:text-platinum sm:text-base md:text-lg"
+      class="mt-12 border-b-2 border-accent pb-1 text-sm font-light text-onyx dark:text-platinum sm:text-base md:text-lg"
       @click="handleError"
     >
       Back to the start

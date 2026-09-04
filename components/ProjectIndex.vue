@@ -1,28 +1,28 @@
 <template>
   <!--
     The row above each project: a wireframe solid drawn by the WebGL layer in
-    the box on the left, a rule that draws itself as the row enters the
-    viewport, and the number. Decorative — the list itself carries the order
-    — so it is hidden from assistive technology.
+    the box, a rule that draws itself as the row enters the viewport, and the
+    number. On wide screens the solid sits on the side opposite the image
+    (`flip`), on narrow ones always on the left. Decorative — the list itself
+    carries the order — so it is hidden from assistive technology.
   -->
   <div
     ref="row"
     aria-hidden="true"
-    class="mb-8 flex items-center gap-6 md:mb-10 md:gap-8"
+    class="mb-8 flex items-center gap-6 will-change-transform md:mb-10 md:gap-8"
+    :class="flip ? 'md:flex-row-reverse' : ''"
   >
     <ElementTracker
       :threeReference="threeReference"
       object="WireShape"
       :variant="shape"
     >
-      <div
-        ref="box"
-        class="h-20 w-20 will-change-transform md:h-28 md:w-28"
-      ></div>
+      <div class="h-14 w-14 md:h-20 md:w-20"></div>
     </ElementTracker>
     <span
       ref="rule"
-      class="index-rule h-px flex-1 origin-left bg-onyx/30 dark:bg-platinum/30"
+      class="index-rule h-px flex-1 bg-onyx/30 dark:bg-platinum/30"
+      :class="flip ? 'origin-left md:origin-right' : 'origin-left'"
     ></span>
     <span
       class="font-mono text-xs tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
@@ -36,6 +36,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { gsap } from 'gsap'
 import { useFrame, damp } from '~/composables/useFrameLoop'
+import { useTrail } from '~/composables/useTrail'
 import { motion } from '~/motion.config'
 import type { WireShapeName } from '~/components/three-components/WireShape'
 
@@ -43,33 +44,34 @@ const props = defineProps<{
   index: number
   /** Unique across every tracker on the page; see ElementTracker. */
   threeReference: string
+  /** Put the solid on the right on wide screens. */
+  flip?: boolean
 }>()
 
 const config = motion.index
 
-const SHAPES: WireShapeName[] = ['cube', 'pyramid', 'octahedron', 'icosahedron']
+const SHAPES: WireShapeName[] = ['cube', 'pyramid', 'octahedron', 'globe']
 const shape = computed(() => SHAPES[props.index % SHAPES.length])
 
 const row = ref<HTMLElement | null>(null)
-const box = ref<HTMLElement | null>(null)
 const rule = ref<HTMLElement | null>(null)
+
+// The whole row rides the page trail; the shape follows by measuring its box
+useTrail(row, motion.trail.index)
 
 let reduced = false
 let setScale: ((value: number) => void) | null = null
-let setY: ((value: number) => void) | null = null
 let progress = 0
 let lastScale = -1
-let lastY = Number.NaN
 
 onMounted(() => {
   reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 })
 
 useFrame('render', (dt) => {
-  if (reduced || !row.value || !box.value || !rule.value) return
-  if (!setScale || !setY) {
+  if (reduced || !row.value || !rule.value) return
+  if (!setScale) {
     setScale = gsap.quickSetter(rule.value, 'scaleX') as (v: number) => void
-    setY = gsap.quickSetter(box.value, 'y', 'px') as (v: number) => void
   }
 
   // Measure the row, not the rule: a rect includes the element's own
@@ -86,15 +88,6 @@ useFrame('render', (dt) => {
   if (scale !== lastScale) {
     lastScale = scale
     setScale(scale)
-  }
-
-  // The box moves and the mesh follows it, since the mesh measures the box
-  const y = Math.round(
-    (rect.top + rect.height / 2 - viewport / 2) * -config.parallax,
-  )
-  if (y !== lastY) {
-    lastY = y
-    setY(y)
   }
 })
 </script>

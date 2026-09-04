@@ -14,7 +14,8 @@
       variant="footer"
     >
       <div
-        class="relative flex flex-col items-start px-[6vw] py-20 sm:px-[8vw] md:py-28"
+        ref="panel"
+        class="relative flex flex-col items-start px-[6vw] py-20 will-change-transform sm:px-[8vw] md:py-28"
       >
         <p
           class="mb-6 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
@@ -53,7 +54,7 @@
             :href="link.to"
             target="_blank"
             rel="noreferrer"
-            class="text-onyx transition-colors hover:text-pink-500 dark:text-platinum dark:hover:text-pink-500"
+            class="text-onyx transition-colors hover:text-accent dark:text-platinum dark:hover:text-accent"
           >
             {{ link.label }}
           </a>
@@ -78,7 +79,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { useTrail } from '~/composables/useTrail'
+import { motion } from '~/motion.config'
+
+// The panel rides the page trail; its light field follows by measuring it
+const panel = ref<HTMLElement | null>(null)
+useTrail(panel, motion.trail.footer)
 
 // The same query the home page makes, so the two share one payload
 const { data: home } = await useHomeContent()

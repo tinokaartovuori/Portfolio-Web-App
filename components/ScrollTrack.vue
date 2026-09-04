@@ -6,7 +6,7 @@
   >
     <div
       ref="indicator"
-      class="absolute right-0 top-0 w-0.5 rounded-full bg-pink-500 xs:w-1 sm:w-1.5"
+      class="absolute right-0 top-0 w-0.5 rounded-full bg-accent xs:w-1 sm:w-1.5"
     ></div>
   </div>
 </template>

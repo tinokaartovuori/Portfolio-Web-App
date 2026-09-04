@@ -118,9 +118,21 @@ export const motion = {
    * a faint pane on either.
    */
   palette: {
-    accent: [0xdb2777, 0xec4899],
-    cool: [0x4f46e5, 0x60a5fa],
+    accent: [0xbf5f84, 0xe08bab],
+    cool: [0x5f6bc4, 0x8b9cf0],
     base: [0x0c0d12, 0xdde0ed],
+  },
+
+  /**
+   * The page-wide trail (useTrail): text, rules and shapes lag their scroll
+   * position through the same spring the images do, so the page moves as one
+   * body. Each site multiplies the trail by its own share.
+   */
+  trail: {
+    text: 1,
+    index: 0.9,
+    heading: 0.6,
+    footer: 0.5,
   },
 
   /** The WebGL images: how they trail, bend, float and react to the cursor. */
@@ -194,16 +206,20 @@ export const motion = {
      * how far, is re-rolled `rate` times a second.
      */
     glitch: {
-      start: 0.55,
-      full: 0.9,
+      start: 0.35,
+      full: 0.75,
       /** Slices across the image's height. */
-      slices: 22,
-      rate: 9,
+      slices: 26,
+      rate: 10,
       /** Furthest tear, in UV units. */
-      shift: 0.05,
+      shift: 0.09,
       /** Share of slices torn at full glitch. */
-      share: 0.35,
+      share: 0.5,
     },
+
+    /** Film grain inside the image only: amplitude in colour units, and how
+     * many times a second it is re-rolled. */
+    grain: { amount: 0.035, rate: 8 },
   },
 
   /**
@@ -232,8 +248,12 @@ export const motion = {
     stretch: 0.6,
     /** Extra intensity at full scroll energy, as a share. */
     brighten: 0.35,
-    /** Dither amplitude in 8-bit steps; hides banding in the light tails. */
-    grain: 3,
+    /**
+     * Frost: a still per-pixel grain in colour units, shown only where the
+     * lights are, so the plate reads as frosted glass rather than a gradient.
+     * Also what hides banding in the light tails.
+     */
+    grain: 0.05,
     presets: {
       hero: {
         /** Lights in the field, at most 6. */
@@ -251,7 +271,7 @@ export const motion = {
           wobble: { speed: 0.4, amplitude: 0.07 },
         },
         /** Peak alpha of one light, `[light, dark]` theme. */
-        intensity: [0.5, 0.42],
+        intensity: [0.5, 0.48],
         /** Alpha of the frosted plate itself, `[light, dark]` theme. */
         baseAlpha: [0.02, 0.04],
         /** The plate is drawn this many px inside the element's box. */
@@ -278,31 +298,40 @@ export const motion = {
   },
 
   /**
-   * Glow plates (GlowPlate): one soft light behind each project image, in the
-   * hero's palette, set back in z and trailing more loosely than the image.
+   * Edge glows (EdgeGlow): light spilling in from the page's edge at each
+   * project image, in the hero's palette, set back in z behind the image.
+   * Its shape is an irregular wash, not the image's outline.
    */
-  glowPlate: {
+  edgeGlow: {
     /** How far behind the z=0 plane the plate sits, world units. Past the
      * deepest the image itself can recede, so the depth test keeps it behind. */
     depth: 120,
-    /** Plate size as a multiple of the image box. */
-    grow: 1.6,
+    /** The plate starts this far outside the viewport, so its own edge never shows. */
+    overhang: 60,
+    /** How far past the image's inner edge the plate reaches, px. */
+    bleed: 90,
+    /** Plate height as a multiple of the image's. */
+    grow: 1.5,
+    /** Horizontal falloff from the page edge: gaussian sigma as a share of the plate width. */
+    reach: 0.55,
+    /** Vertical falloff: gaussian sigma as a share of the plate's half height. */
+    spreadY: 0.55,
     /**
-     * The glow follows the image's own outline: full inside it, falling off
-     * as a gaussian of the distance from its edge, with this sigma in px.
+     * The irregularity: value noise over the plate (cells across its width
+     * and height), drifting slowly, scaling the wash between 1-contrast and
+     * 1+contrast.
      */
-    spread: 48,
-    /** Corner radius of that outline, px. */
-    cornerRadius: 6,
-    /** Peak alpha at the edge, `[light, dark]` theme. */
-    intensity: [0.2, 0.22],
+    noise: { scale: [2.5, 1.6], speed: 0.05, contrast: 0.55 },
+    /** Peak alpha at the page edge, `[light, dark]` theme. */
+    intensity: [0.38, 0.34],
     /** Extra intensity, as a share, with the pointer over the image. */
-    hoverBoost: 0.5,
+    hoverBoost: 0.4,
     /** Extra intensity, as a share, at full scroll energy. */
     energyBoost: 0.25,
-    /** Looser and larger than the image's trail, so they separate and rejoin. */
-    lag: { max: 48, stiffness: 90, damping: 17 },
+    /** The same trail as the image, so the two move as one. */
+    lag: { max: 30, stiffness: 120, damping: 19 },
     hoverSpring: { stiffness: 120, damping: 20 },
+    /** Dither in 8-bit steps. */
     grain: 3,
   },
 
@@ -313,21 +342,18 @@ export const motion = {
     drawSpan: 0.35,
     /** Decay rate per second of the draw progress. */
     drawSmoothing: 10,
-    /** The shape's box drifts against the scroll by this share of its
-     * distance from the viewport centre. */
-    parallax: 0.08,
   },
 
   /**
-   * Wireframe shapes (WireShape): a cube, a pyramid, an octahedron and an
-   * icosahedron in the index rows, turning with the scroll and toward the
-   * pointer.
+   * Wireframe shapes (WireShape): a cube, a pyramid, an octahedron and a
+   * globe in the index rows, turning with the scroll and toward the pointer.
+   * They sit exactly on their box; the box itself carries the page trail.
    */
   wireShape: {
     /** Shape size as a share of the box's shorter side. */
-    fill: 0.78,
+    fill: 0.75,
     /** Turn at rest, rad/s, and the extra turn at full scroll drive. */
-    idleSpin: 0.25,
+    idleSpin: 0.3,
     scrollSpin: 2.2,
     hoverSpring: { stiffness: 140, damping: 18 },
     /** Growth under the pointer, as a share. */
@@ -338,7 +364,6 @@ export const motion = {
     /** Line opacity, `[light, dark]` theme, and the extra under the pointer. */
     opacity: [0.55, 0.5],
     hoverOpacity: 0.35,
-    lag: { max: 10, stiffness: 120, damping: 20 },
   },
 
   /** The running band of words between the hero and the work (Marquee.vue). */
@@ -354,30 +379,14 @@ export const motion = {
     skew: 6,
   },
 
-  /** The custom cursor (Cursor.vue): a dot on the pointer, a ring behind it. */
-  cursor: {
-    /** The ring chases the pointer through this: quick, a hint of lag. */
-    ring: { stiffness: 420, damping: 32 },
-    /** How the ring grows and shrinks between states. */
-    scale: { stiffness: 260, damping: 22 },
-    size: {
-      /** Dot and ring diameters, px. */
-      dot: 6,
-      ring: 36,
-      /** Ring scale over a link, and over an element marked data-cursor="view". */
-      link: 1.6,
-      view: 2.4,
-    },
-  },
-
-  /** Magnetic elements (useMagnetic): pulled toward a nearby pointer. */
+  /** Magnetic elements (useMagnetic): pulled a little toward a nearby pointer. */
   magnetic: {
     /** How far outside the element's box the pull starts, px. */
-    radius: 48,
+    radius: 40,
     /** Share of the pointer's offset from the centre the element moves by. */
-    strength: 0.35,
-    /** Under critical, so a release lets go with one small wobble. */
-    spring: { stiffness: 150, damping: 15 },
+    strength: 0.16,
+    /** Close to critical: it follows and lets go without a wobble. */
+    spring: { stiffness: 170, damping: 24 },
   },
 
   /**

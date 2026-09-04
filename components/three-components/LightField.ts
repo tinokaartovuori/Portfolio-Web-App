@@ -79,6 +79,13 @@ const fragmentShader = /* glsl */ `
   uniform float uGrain;
   varying vec2 vUv;
 
+  // Per-pixel hash without a sine, which shows its period on some GPUs
+  float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
   void main() {
     // Rounded rectangle, as a signed distance in px from the plate's edge
     vec2 p = (vUv - 0.5) * uSize;
@@ -104,12 +111,13 @@ const fragmentShader = /* glsl */ `
       a = aOut;
     }
 
-    // Dither colour and alpha alike: on a dark page the banding lives in the
-    // low-alpha tail of each light, not in its colour
-    float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-    float dither = (n - 0.5) * uGrain / 255.0;
-    col += dither;
-    a = clamp(a + dither, 0.0, 1.0);
+    // Frost: a still grain in the lit parts only, so the plate reads as
+    // frosted glass rather than a gradient. It is not animated — a moving
+    // grain over a still page reads as a pattern, not a surface. The same
+    // noise, faint, in the alpha is what hides banding in the light tails.
+    float n = hash12(gl_FragCoord.xy) - 0.5;
+    col += n * uGrain * smoothstep(0.0, 0.25, a);
+    a = clamp(a + n * 2.0 / 255.0, 0.0, 1.0);
 
     gl_FragColor = vec4(col, a * mask);
 

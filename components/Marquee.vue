@@ -20,7 +20,7 @@
       >
         {{ word }}
         <span
-          class="mx-6 inline-block h-2 w-2 rounded-full bg-pink-500 sm:mx-8 md:mx-10 md:h-2.5 md:w-2.5"
+          class="mx-6 inline-block h-2 w-2 rounded-full bg-accent sm:mx-8 md:mx-10 md:h-2.5 md:w-2.5"
         ></span>
       </span>
     </div>

@@ -23,6 +23,9 @@
 
   --color-onyx: #0c0d12;
   --color-platinum: #dde0ed;
+  /* The one accent: a muted rose that sits with both page colours. The WebGL
+   * palette in motion.config.ts is tuned to it. */
+  --color-accent: #d4708f;
 
   --font-sans: 'Outfit', sans-serif;
   --font-outfit: 'Outfit', sans-serif;
@@ -181,18 +184,8 @@ html * {
 }
 
 :focus-visible {
-  outline: 2px solid #ec4899;
+  outline: 2px solid #d4708f;
   outline-offset: 4px;
-}
-
-/*
- * Cursor.vue stamps this on <html> while its own cursor is on screen. Every
- * descendant, because controls set their own (`cursor-pointer` on the theme
- * switch) and would otherwise show two.
- */
-.cursor-custom,
-.cursor-custom * {
-  cursor: none !important;
 }
 
 #__nuxt {

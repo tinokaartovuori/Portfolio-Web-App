@@ -48,7 +48,7 @@
   <Marquee v-if="home?.marquee" :words="home.marquee" />
 
   <section id="work" class="w-full px-[8vw] pb-40 pt-16 sm:px-[10vw] md:pt-24">
-    <header class="mb-20 md:mb-28">
+    <header ref="workHeader" class="mb-20 will-change-transform md:mb-28">
       <p
         class="mb-4 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
       >
@@ -66,6 +66,7 @@
         <ProjectIndex
           :index="index"
           :threeReference="`shape-${project.stem}`"
+          :flip="index % 2 === 0"
         />
 
         <div
@@ -74,20 +75,20 @@
         >
           <!--
             The tracker's own div is the flex child, so the column width goes
-            on it; the link inside is the box the glow plate follows, and the
+            on it; the link inside is the box the edge glow follows, and the
             image the box measures. `glow-` and `project-` keep the two ids
-            apart in the shared registry.
+            apart in the shared registry. The glow's side is the page edge
+            nearest the image on wide screens; on narrow ones it alternates.
           -->
           <ElementTracker
             class="w-full md:w-3/5"
             :threeReference="`glow-${project.stem}`"
-            object="GlowPlate"
-            :variant="index % 2 === 1 ? 'cool' : 'accent'"
+            object="EdgeGlow"
+            :variant="index % 2 === 1 ? 'cool-right' : 'accent-left'"
           >
             <NuxtLink
               :to="project.path"
               class="block"
-              data-cursor="view"
               :aria-label="`View ${project.title}`"
             >
               <ThreeImage
@@ -98,7 +99,10 @@
             </NuxtLink>
           </ElementTracker>
 
-          <div class="flex w-full flex-col md:w-2/5 md:pt-2">
+          <div
+            :ref="(el) => trailed(el, index)"
+            class="flex w-full flex-col will-change-transform md:w-2/5 md:pt-2"
+          >
             <p
               class="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
             >
@@ -133,7 +137,8 @@
 
   <section
     v-if="about"
-    class="w-full px-[8vw] pb-24 sm:px-[10vw] md:pb-32 lg:px-[14vw]"
+    ref="aboutTeaser"
+    class="w-full px-[8vw] pb-24 will-change-transform sm:px-[10vw] md:pb-32 lg:px-[14vw]"
   >
     <p
       class="mb-6 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
@@ -165,9 +170,35 @@
 
 <script setup lang="ts">
 import { ref, watchEffect, onUnmounted } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
+import { useTrail } from '~/composables/useTrail'
+import { motion } from '~/motion.config'
+
+/*
+ * The page trail: headings and text columns lag their scroll position
+ * through the same spring as the images, so the page moves as one body. The
+ * image columns are left alone — their meshes carry the trail themselves.
+ */
+const workHeader = ref<HTMLElement | null>(null)
+const aboutTeaser = ref<HTMLElement | null>(null)
+useTrail(workHeader, motion.trail.heading)
+useTrail(aboutTeaser, motion.trail.heading)
+
+// One ref per project text column, created as the list renders
+const textColumns = Array.from({ length: 8 }, () =>
+  ref<HTMLElement | null>(null),
+)
+for (const column of textColumns) useTrail(column, motion.trail.text)
+const trailed = (
+  el: Element | ComponentPublicInstance | null,
+  index: number,
+) => {
+  const column = textColumns[index]
+  if (column) column.value = el instanceof HTMLElement ? el : null
+}
 
 const { scrollPromptSuppressed, heroHeight: storedHeroHeight } = storeToRefs(
   useScrollStateStore(),

@@ -58,6 +58,9 @@ type WavyImageUniforms = {
   uGlitchRate: { value: number }
   uGlitchShift: { value: number }
   uGlitchShare: { value: number }
+  /** Film grain amplitude in colour units, and its re-roll rate per second. */
+  uGrain: { value: number }
+  uGrainRate: { value: number }
 }
 
 const vertexShader = /* glsl */ `
@@ -121,10 +124,15 @@ const fragmentShader = /* glsl */ `
   uniform float uGlitchRate;
   uniform float uGlitchShift;
   uniform float uGlitchShare;
+  uniform float uGrain;
+  uniform float uGrainRate;
   varying vec2 vUv;
 
+  // Per-pixel hash without a sine, which shows its period on some GPUs
   float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
   }
 
   void main() {
@@ -157,7 +165,13 @@ const fragmentShader = /* glsl */ `
     float r = texture2D(uTexture, uv + shift).r;
     float g = texture2D(uTexture, uv).g;
     float b = texture2D(uTexture, uv - shift).b;
-    gl_FragColor = vec4(r, g, b, 1.0);
+    vec3 col = vec3(r, g, b);
+
+    // Film grain, inside the photograph only, re-rolled a few times a second
+    float grain = hash(gl_FragCoord.xy + floor(uTime * uGrainRate) * 17.0) - 0.5;
+    col += grain * uGrain;
+
+    gl_FragColor = vec4(col, 1.0);
 
     // The texture is decoded to linear on sample (colorSpace = SRGBColorSpace),
     // so the result has to be encoded back to the output space here. This
@@ -261,6 +275,8 @@ export default class WavyImage
       uGlitchRate: { value: config.glitch.rate },
       uGlitchShift: { value: config.glitch.shift },
       uGlitchShare: { value: config.glitch.share },
+      uGrain: { value: config.grain.amount },
+      uGrainRate: { value: config.grain.rate },
     }
 
     const shaderMaterial = new ShaderMaterial({
@@ -359,6 +375,8 @@ export default class WavyImage
       uniforms.uAberration.value = 0
       uniforms.uHover.value = 0
       uniforms.uGlitch.value = 0
+      // A still grain is texture; a moving one is motion
+      uniforms.uTime.value = 0
       return
     }
 
