@@ -8,7 +8,7 @@
 import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
 import ElementManager from './three-components/ElementManager'
-import Backdrop from './three-components/Backdrop'
+import LineBands from './three-components/LineBands'
 import type { FrameContext } from './three-components/FrameContext'
 
 import type { Ref } from 'vue'
@@ -47,8 +47,8 @@ const themeTarget = () => (colorMode.value === 'dark' ? 1 : 0)
 let scenario: Scenario | null = null
 let imageManager: ImageManager | null = null
 let elementManager: ElementManager | null = null
-// The lit part of the scene, not pinned to any element: the depth behind the page
-let backdrop: Backdrop | null = null
+// The one thing in the scene not pinned to an element: the depth behind the page
+let bands: LineBands | null = null
 const { heroHeight } = storeToRefs(useScrollStateStore())
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
@@ -78,7 +78,7 @@ onMounted(() => {
   if (POST_PROCESSING) scenario.enablePostProcessing()
   imageManager = new ImageManager(scenario.scene)
   elementManager = new ElementManager(scenario.scene)
-  backdrop = new Backdrop(scenario.scene)
+  bands = new LineBands(scenario.scene)
   stopPointer = createPointerTracker()
 
   imageManager.loadImages(threeImageTracker.value)
@@ -106,7 +106,7 @@ onMounted(() => {
       frame.heroHeight = heroHeight.value
       imageManager.updateImages(frame)
       elementManager.updateElementPositions(frame)
-      backdrop?.update(frame, imageManager.images)
+      bands?.update(frame)
     }),
     onFrame('render', () => scenario?.render()),
   )
@@ -127,12 +127,12 @@ onUnmounted(() => {
 
   imageManager?.removeImages()
   elementManager?.removeElements()
-  backdrop?.dispose()
+  bands?.dispose()
   scenario?.dispose()
 
   imageManager = null
   elementManager = null
-  backdrop = null
+  bands = null
   scenario = null
 })
 
@@ -176,7 +176,7 @@ const resize = () => {
 
   imageManager.resizeImages()
   elementManager.updateElements()
-  backdrop?.resize()
+  bands?.resize()
 
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)

@@ -121,9 +121,6 @@ export const motion = {
     accent: [0xbf5f84, 0xe08bab],
     cool: [0x5f6bc4, 0x8b9cf0],
     base: [0x0c0d12, 0xdde0ed],
-    /** The page colours themselves (platinum, onyx): what the lit backdrop
-     * must look like where no light falls. */
-    page: [0xdde0ed, 0x0c0d12],
   },
 
   /**
@@ -301,50 +298,42 @@ export const motion = {
   },
 
   /**
-   * The lit backdrop (Backdrop): a faceted matte surface far behind the page
-   * and real point lights beside each image and under the pointer. Unlit,
-   * the surface is exactly the page colour; the lights are pale and dim, so
-   * what shows is a quiet geometric patch of light near each image.
+   * The line bands (LineBands): bundles of parallel lines flowing through the
+   * depth behind the page, each following one waving path and fanning open
+   * and closed along it. One colour, the text colour, at a low alpha; the
+   * near bands wide and blurred, the far ones crisp.
    */
-  backdrop: {
-    /** Depth of the surface, world units; the page is at 0, the camera at 1000. */
-    depth: -650,
-    /** The matte grey the lit shader works with; the ambient light makes
-     * unlit areas the page colour whatever this is. Higher takes more light. */
-    albedo: 0.35,
-    roughness: 1,
-    surface: {
-      /** Undulation height, world units, and its scale (1 / wavelength). */
-      amplitude: 70,
-      scale: 0.004,
-      /** Vertex spacing, world units: the facet size. */
-      cell: 120,
-      /** How far vertices are pushed off the grid, as a share of the cell,
-       * and how much per-vertex height noise is added, world units. */
-      jitter: 0.45,
-      roughen: 50,
-    },
-    /** The surface rides a trail of its own, scaled by depth. */
-    lag: { max: 60, stiffness: 90, damping: 18 },
-    lights: {
-      /** Lights in the pool; the lit shader compiles for this many, so a page
-       * with fewer images leaves the rest dark rather than recompiling. */
-      pool: 6,
-      /** How far the palette hues are pulled toward white for the lights. */
-      paleness: 0.6,
-      /** Depth of the image lights, and how far past the image's outer edge they sit, px. */
-      depth: -220,
-      offset: 140,
-      /** PointLight intensity (candela; irradiance = intensity / distance²), `[light, dark]` theme. */
-      intensity: [340000, 150000],
-      /** The lights come on over this share of the viewport height as the hero scrolls away. */
-      fadeSpan: 0.6,
-      cursor: {
-        depth: -200,
-        intensity: [220000, 110000],
-        spring: { stiffness: 40, damping: 12 },
-      },
-    },
+  bands: {
+    count: 5,
+    /** Lines in a band, points along each, and the spacing between lines, screen px. */
+    strands: 14,
+    points: 96,
+    spacing: 9,
+    /** Depth range `[farthest, nearest]`, all behind the page (the page is at 0). */
+    depth: [-950, -280],
+    /** Line width, screen px, `[far, near]`. */
+    width: [1, 7],
+    /** Alpha, `[light, dark]` theme. */
+    alpha: [0.3, 0.2],
+    /** How far past the viewport's half width a band reaches, as a share. */
+    extent: 1.4,
+    /** Largest slope of a band across the viewport. */
+    tilt: 0.35,
+    /** The waves on the path: amplitude (screen px), base frequency (1/px)
+     * and how fast they travel (rad/s). */
+    wave: { amplitude: 110, frequency: 0.0032, rate: 0.35 },
+    /** The fan: how much the spacing swells (share), how often along the
+     * band (1/px) and how fast it moves (rad/s). */
+    fan: { amount: 0.55, frequency: 0.0026, rate: 0.3 },
+    /** Scrolling quickens the waves by this share at full energy. */
+    scroll: { boost: 2 },
+    /** The pointer pushes the path away within `radius` px by up to `bend` px,
+     * through a slow spring. */
+    cursor: { radius: 220, bend: 70, spring: { stiffness: 40, damping: 12 } },
+    /** They come on over this share of the viewport height as the hero scrolls away. */
+    fadeSpan: 0.6,
+    /** The whole field rides a trail of its own, scaled by depth. */
+    lag: { max: 40, stiffness: 90, damping: 18 },
   },
 
   /** The index row above each project (ProjectIndex.vue). */
