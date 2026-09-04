@@ -121,6 +121,9 @@ export const motion = {
     accent: [0xbf5f84, 0xe08bab],
     cool: [0x5f6bc4, 0x8b9cf0],
     base: [0x0c0d12, 0xdde0ed],
+    /** The page colours themselves (platinum, onyx): what the lit backdrop
+     * must look like where no light falls. */
+    page: [0xdde0ed, 0x0c0d12],
   },
 
   /**
@@ -298,75 +301,58 @@ export const motion = {
   },
 
   /**
-   * Edge glows (EdgeGlow): light spilling in from the page's edge at each
-   * project image, in the hero's palette, set back in z behind the image.
-   * Its shape is an irregular wash, not the image's outline.
+   * The lit backdrop (Backdrop): real coloured point lights beside each image
+   * and under the pointer, falling on a wide undulating matte surface far
+   * behind the page and on a few matte forms between. Unlit, both are
+   * exactly the page colour, so what shows is light on a surface.
    */
-  edgeGlow: {
-    /** How far behind the z=0 plane the plate sits, world units. Past the
-     * deepest the image itself can recede, so the depth test keeps it behind. */
-    depth: 120,
-    /** The plate starts this far outside the viewport, so its own edge never shows. */
-    overhang: 60,
-    /** How far past the image's inner edge the plate reaches, px. */
-    bleed: 220,
-    /** Plate height as a multiple of the image's. */
-    grow: 2.2,
-    /** Horizontal falloff from the page edge: gaussian sigma as a share of the plate width. */
-    reach: 0.72,
-    /** Vertical falloff: gaussian sigma as a share of the plate's half height. */
-    spreadY: 0.7,
-    /**
-     * The irregularity: value noise over the plate (cells across its width
-     * and height), drifting slowly, scaling the wash between 1-contrast and
-     * 1+contrast.
-     */
-    noise: { scale: [2.2, 1.4], speed: 0.05, contrast: 0.4 },
-    /** Peak alpha at the page edge, `[light, dark]` theme. */
-    intensity: [0.34, 0.3],
-    /** Extra intensity, as a share, with the pointer over the image. */
-    hoverBoost: 0.4,
-    /** Extra intensity, as a share, at full scroll energy. */
-    energyBoost: 0.25,
-    /** The same trail as the image, so the two move as one. */
-    lag: { max: 30, stiffness: 120, damping: 19 },
-    hoverSpring: { stiffness: 120, damping: 20 },
-    /** Dither in 8-bit steps. */
-    grain: 3,
-  },
-
-  /**
-   * The light cloud (LightCloud): large soft lights through the whole page at
-   * different depths, in the hero's palette. Depth is real — the camera's
-   * own parallax — so the deeper ones drift past slowly and the nearer ones
-   * quickly, larger and softer.
-   */
-  lightCloud: {
-    count: 18,
-    /** Depth range in world units: `[farthest, nearest]`; the page is at 0
-     * and the camera at 1000. Positive is in front of the page. */
-    depth: [-750, 320],
-    /** Screen size at rest, px, `[smallest, largest]`. */
-    size: [160, 420],
-    /** Where the lights sit across the viewport at their depth, as a share
-     * of it; over 1 lets some sit off the edge. */
-    spread: 1.15,
-    /** Peak alpha, `[light, dark]` theme. */
-    intensity: [0.16, 0.24],
-    /** Idle wander: rad/s and px (at the page's depth). */
-    drift: { speed: 0.18, amplitude: 36 },
-    /** Vertical elongation at full scroll energy, as a share. */
-    stretch: 0.5,
-    /** The trail, in the images' terms, scaled by depth. */
-    lag: { max: 40, stiffness: 90, damping: 18 },
-    /** The pointer pulls a light within `radius` px by up to `strength` of
-     * the distance, through a slow spring. */
-    cursor: {
-      radius: 360,
-      strength: 0.3,
-      spring: { stiffness: 40, damping: 11 },
+  backdrop: {
+    /** Depth of the surface, world units; the page is at 0, the camera at 1000. */
+    depth: -650,
+    /** The matte grey the lit shader works with; the ambient light makes
+     * unlit areas the page colour whatever this is. Higher takes more light. */
+    albedo: 0.35,
+    roughness: 0.9,
+    surface: {
+      /** Undulation height, world units, and its scale (1 / wavelength). */
+      amplitude: 90,
+      scale: 0.0045,
+      /** Vertex spacing, world units: fine enough for smooth shading. */
+      cell: 40,
     },
-    grain: 3,
+    /** The surface and the forms ride a trail of their own, scaled by depth. */
+    lag: { max: 60, stiffness: 90, damping: 18 },
+    blobs: {
+      count: 5,
+      /** Depth range `[farthest, nearest]`, between the surface and the page. */
+      depth: [-620, -420],
+      /** Size at rest as a screen size, px, `[smallest, largest]`. */
+      size: [70, 170],
+      /** Where they sit across the viewport at their depth, as a share of it. */
+      spread: 1.1,
+      /** How far the sphere is pushed in and out, as a share of its radius. */
+      noise: 0.3,
+      /** Tumble at rest, rad/s, and the extra at full scroll drive. */
+      tumble: 0.18,
+      scrollSpin: 1.2,
+    },
+    lights: {
+      /** Lights in the pool; the lit shader compiles for this many, so a page
+       * with fewer images leaves the rest dark rather than recompiling. */
+      pool: 6,
+      /** Depth of the image lights, and how far past the image's outer edge they sit, px. */
+      depth: -220,
+      offset: 140,
+      /** PointLight intensity (candela; irradiance = intensity / distance²), `[light, dark]` theme. */
+      intensity: [380000, 420000],
+      /** The lights come on over this share of the viewport height as the hero scrolls away. */
+      fadeSpan: 0.6,
+      cursor: {
+        depth: -200,
+        intensity: [220000, 300000],
+        spring: { stiffness: 40, damping: 12 },
+      },
+    },
   },
 
   /** The index row above each project (ProjectIndex.vue). */

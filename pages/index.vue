@@ -73,19 +73,8 @@
           class="flex flex-col gap-8 md:flex-row md:items-start md:gap-16"
           :class="index % 2 === 1 ? 'md:flex-row-reverse' : ''"
         >
-          <!--
-            The tracker's own div is the flex child, so the column width goes
-            on it; the link inside is the box the edge glow follows, and the
-            image the box measures. `glow-` and `project-` keep the two ids
-            apart in the shared registry. The glow's side is the page edge
-            nearest the image on wide screens; on narrow ones it alternates.
-          -->
-          <ElementTracker
-            class="w-full md:w-3/5"
-            :threeReference="`glow-${project.stem}`"
-            object="EdgeGlow"
-            :variant="index % 2 === 1 ? 'cool-right' : 'accent-left'"
-          >
+          <!-- The backdrop lights each image from its page-edge side; see Backdrop.ts -->
+          <div class="w-full md:w-3/5">
             <NuxtLink
               :to="project.path"
               class="block"
@@ -97,7 +86,7 @@
                 :alt="project.imageAlt"
               />
             </NuxtLink>
-          </ElementTracker>
+          </div>
 
           <div
             :ref="(el) => trailed(el, index)"

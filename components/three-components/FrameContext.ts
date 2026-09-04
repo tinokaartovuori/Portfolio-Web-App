@@ -24,4 +24,10 @@ export interface FrameContext {
    * two palettes by it fades along with the page rather than snapping.
    */
   theme: number
+  /**
+   * The hero's height on the current page in px (from the scroll store): 0
+   * on a page without one, Infinity until the page has measured it. The
+   * backdrop's lights come on as the hero scrolls away.
+   */
+  heroHeight: number
 }
