@@ -29,7 +29,7 @@
       ]"
     ></div>
     <div class="relative flex w-full justify-center">
-      <div class="flex w-[75%] justify-end xs:w-[85%]">
+      <div class="flex w-[75%] items-center justify-end xs:w-[85%]">
         <slot></slot>
       </div>
     </div>

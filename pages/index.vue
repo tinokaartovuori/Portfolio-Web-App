@@ -10,11 +10,14 @@
     both edges, so however short or narrow the viewport its text sits between
     the name and the scroll prompt rather than under either. When it still
     cannot fit, the scroll prompt is suppressed instead (see the script).
+    On a phone in portrait the text sits in the lower part of the screen,
+    above the scroll prompt, and the light field has the upper part; from
+    md up it is centred.
   -->
   <ElementTracker threeReference="hero" object="LightField" variant="hero">
     <section
       ref="hero"
-      class="flex min-h-[100svh] w-full items-center px-[8vw] pb-[calc(var(--bar-safe)_+_2rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] sm:px-[10vw]"
+      class="flex min-h-[100svh] w-full items-end px-[8vw] pb-[calc(var(--bar-safe)_+_3.5rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] sm:px-[10vw] md:items-center md:pb-[calc(var(--bar-safe)_+_2rem)]"
     >
       <div class="w-full">
         <h1

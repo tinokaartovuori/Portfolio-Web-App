@@ -2,27 +2,27 @@
   <!--
     The row above each project: a wireframe solid drawn by the WebGL layer in
     the box, a rule that draws itself as the row enters the viewport, and the
-    number. On wide screens the solid sits on the side opposite the image
-    (`flip`), on narrow ones always on the left. Decorative — the list itself
+    number. The solid alternates sides down the list (`flip`): on wide
+    screens that puts it opposite the image. Decorative — the list itself
     carries the order — so it is hidden from assistive technology.
   -->
   <div
     ref="row"
     aria-hidden="true"
-    class="mb-8 flex items-center gap-6 will-change-transform md:mb-10 md:gap-8"
-    :class="flip ? 'md:flex-row-reverse' : ''"
+    class="mb-8 flex items-center gap-5 will-change-transform md:mb-10 md:gap-8"
+    :class="flip ? 'flex-row-reverse' : ''"
   >
     <ElementTracker
       :threeReference="threeReference"
       object="WireShape"
       :variant="shape"
     >
-      <div class="h-14 w-14 md:h-20 md:w-20"></div>
+      <div class="h-8 w-8 md:h-14 md:w-14"></div>
     </ElementTracker>
     <span
       ref="rule"
       class="index-rule h-px flex-1 bg-onyx/30 dark:bg-platinum/30"
-      :class="flip ? 'origin-left md:origin-right' : 'origin-left'"
+      :class="flip ? 'origin-right' : 'origin-left'"
     ></span>
     <span
       class="font-mono text-xs tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
@@ -44,7 +44,7 @@ const props = defineProps<{
   index: number
   /** Unique across every tracker on the page; see ElementTracker. */
   threeReference: string
-  /** Put the solid on the right on wide screens. */
+  /** Put the solid on the right. */
   flip?: boolean
 }>()
 

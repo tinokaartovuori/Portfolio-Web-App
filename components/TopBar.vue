@@ -14,8 +14,8 @@
         </NuxtLink>
       </Magnetic>
     </div>
-    <div class="flex w-full justify-end">
-      <nav aria-label="Main" class="flex xs:mr-2 sm:mr-4 md:mr-6">
+    <div class="flex w-full items-center justify-end">
+      <nav aria-label="Main" class="flex items-center xs:mr-2 sm:mr-4 md:mr-6">
         <Magnetic>
           <NuxtLink
             to="/about"

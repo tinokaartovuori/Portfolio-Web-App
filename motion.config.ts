@@ -301,10 +301,10 @@ export const motion = {
   },
 
   /**
-   * The lit backdrop (Backdrop): real coloured point lights beside each image
-   * and under the pointer, falling on a wide undulating matte surface far
-   * behind the page and on a few matte forms between. Unlit, both are
-   * exactly the page colour, so what shows is light on a surface.
+   * The lit backdrop (Backdrop): a faceted matte surface far behind the page
+   * and real point lights beside each image and under the pointer. Unlit,
+   * the surface is exactly the page colour; the lights are pale and dim, so
+   * what shows is a quiet geometric patch of light near each image.
    */
   backdrop: {
     /** Depth of the surface, world units; the page is at 0, the camera at 1000. */
@@ -312,44 +312,36 @@ export const motion = {
     /** The matte grey the lit shader works with; the ambient light makes
      * unlit areas the page colour whatever this is. Higher takes more light. */
     albedo: 0.35,
-    roughness: 0.9,
+    roughness: 1,
     surface: {
       /** Undulation height, world units, and its scale (1 / wavelength). */
-      amplitude: 90,
-      scale: 0.0045,
-      /** Vertex spacing, world units: fine enough for smooth shading. */
-      cell: 40,
+      amplitude: 70,
+      scale: 0.004,
+      /** Vertex spacing, world units: the facet size. */
+      cell: 120,
+      /** How far vertices are pushed off the grid, as a share of the cell,
+       * and how much per-vertex height noise is added, world units. */
+      jitter: 0.45,
+      roughen: 50,
     },
-    /** The surface and the forms ride a trail of their own, scaled by depth. */
+    /** The surface rides a trail of its own, scaled by depth. */
     lag: { max: 60, stiffness: 90, damping: 18 },
-    blobs: {
-      count: 5,
-      /** Depth range `[farthest, nearest]`, between the surface and the page. */
-      depth: [-620, -420],
-      /** Size at rest as a screen size, px, `[smallest, largest]`. */
-      size: [70, 170],
-      /** Where they sit across the viewport at their depth, as a share of it. */
-      spread: 1.1,
-      /** How far the sphere is pushed in and out, as a share of its radius. */
-      noise: 0.3,
-      /** Tumble at rest, rad/s, and the extra at full scroll drive. */
-      tumble: 0.18,
-      scrollSpin: 1.2,
-    },
     lights: {
       /** Lights in the pool; the lit shader compiles for this many, so a page
        * with fewer images leaves the rest dark rather than recompiling. */
       pool: 6,
+      /** How far the palette hues are pulled toward white for the lights. */
+      paleness: 0.6,
       /** Depth of the image lights, and how far past the image's outer edge they sit, px. */
       depth: -220,
       offset: 140,
       /** PointLight intensity (candela; irradiance = intensity / distance²), `[light, dark]` theme. */
-      intensity: [380000, 420000],
+      intensity: [340000, 150000],
       /** The lights come on over this share of the viewport height as the hero scrolls away. */
       fadeSpan: 0.6,
       cursor: {
         depth: -200,
-        intensity: [220000, 300000],
+        intensity: [220000, 110000],
         spring: { stiffness: 40, damping: 12 },
       },
     },
