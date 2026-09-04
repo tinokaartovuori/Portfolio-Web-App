@@ -12,7 +12,12 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/styles/index.css'],
   components: true,
-  modules: ['@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/fonts'],
+  modules: [
+    '@pinia/nuxt',
+    '@nuxtjs/color-mode',
+    '@nuxt/fonts',
+    '@nuxt/content',
+  ],
   app: {
     head: {
       htmlAttrs: {
@@ -40,6 +45,13 @@ export default defineNuxtConfig({
         },
       ],
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    },
+  },
+  content: {
+    experimental: {
+      // Node ships a SQLite binding from 22.5, so the content database needs no
+      // better-sqlite3 native build — nothing to compile on any machine
+      sqliteConnector: 'native',
     },
   },
   colorMode: {

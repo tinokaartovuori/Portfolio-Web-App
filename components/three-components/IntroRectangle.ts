@@ -1,17 +1,12 @@
-import {
-  Mesh,
-  MeshBasicMaterial,
-  ShapeGeometry,
-  Object3D,
-  Vector2,
-} from 'three'
+import { Mesh, MeshBasicMaterial, ShapeGeometry, Vector2 } from 'three'
 import { RoundedRectangleShape } from './RoundedRectangleShape'
+import type { TrackedObject3D } from './ElementManager'
 
-export class IntroRectangle extends Object3D {
-  mesh: Mesh | undefined
-  geometry: ShapeGeometry | undefined
-  material: MeshBasicMaterial | undefined
-  element: HTMLDivElement
+export class IntroRectangle
+  extends Mesh<ShapeGeometry, MeshBasicMaterial>
+  implements TrackedObject3D
+{
+  element: HTMLElement
 
   sizes: Vector2
   offset: Vector2
@@ -20,15 +15,24 @@ export class IntroRectangle extends Object3D {
   padding: number
   cornerRadius: number
 
-  constructor(element: HTMLDivElement) {
-    super()
+  constructor(element: HTMLElement) {
+    // The geometry is a placeholder until the element has been measured; the
+    // material outlives every rebuild, so it is handed to the mesh once here
+    super(
+      new ShapeGeometry(),
+      new MeshBasicMaterial({
+        color: 0xd152c4,
+        transparent: true,
+        opacity: 0.5,
+      }),
+    )
     this.element = element
     this.sizes = new Vector2(0, 0)
     this.offset = new Vector2(0, 0)
     this.meshSizes = new Vector2(0, 0)
     this.padding = this.calculatePadding()
     this.cornerRadius = this.calculateCornerRadius()
-    this.createMesh()
+    this.buildGeometry()
   }
 
   getDimensions() {
@@ -42,7 +46,11 @@ export class IntroRectangle extends Object3D {
     this.cornerRadius = this.calculateCornerRadius()
   }
 
-  createMesh() {
+  /**
+   * Re-triangulates the rounded rectangle at the element's current size. The
+   * shape is built around the origin; the mesh itself carries the offset.
+   */
+  buildGeometry() {
     const shape = new RoundedRectangleShape(
       0,
       0,
@@ -50,15 +58,9 @@ export class IntroRectangle extends Object3D {
       this.sizes.y - this.padding * 2,
       this.cornerRadius,
     )
+    this.geometry.dispose()
     this.geometry = new ShapeGeometry(shape)
-    this.material = new MeshBasicMaterial({
-      color: 0xd152c4,
-      transparent: true,
-      opacity: 0.5,
-    })
-    this.mesh = new Mesh(this.geometry, this.material)
     this.meshSizes.copy(this.sizes)
-    this.add(this.mesh)
   }
 
   update() {
@@ -69,23 +71,10 @@ export class IntroRectangle extends Object3D {
     this.getDimensions()
 
     // The shape only has to be re-triangulated when the element resized
-    if (this.mesh && this.meshSizes.equals(this.sizes)) {
-      this.updatePosition()
-      return
+    if (!this.meshSizes.equals(this.sizes)) {
+      this.buildGeometry()
     }
 
-    this.rebuildMesh()
-  }
-
-  rebuildMesh() {
-    if (this.mesh) {
-      this.remove(this.mesh)
-    }
-
-    this.geometry?.dispose()
-    this.material?.dispose()
-
-    this.createMesh()
     this.updatePosition()
   }
 
@@ -94,11 +83,9 @@ export class IntroRectangle extends Object3D {
   }
 
   updatePosition() {
-    if (!this.mesh) return
-    // this.updateShape()
     this.getDimensions()
-    this.mesh.position.y = this.offset.y
-    this.mesh.position.x = this.offset.x
+    this.position.y = this.offset.y
+    this.position.x = this.offset.x
   }
 
   calculatePadding() {
@@ -122,7 +109,7 @@ export class IntroRectangle extends Object3D {
   }
 
   dispose() {
-    this.geometry?.dispose()
-    this.material?.dispose()
+    this.geometry.dispose()
+    this.material.dispose()
   }
 }

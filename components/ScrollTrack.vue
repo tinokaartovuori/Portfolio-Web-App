@@ -1,6 +1,7 @@
 <template>
   <div
     ref="track"
+    aria-hidden="true"
     class="fixed bottom-0 right-0 top-0 z-40 w-0.5 bg-onyx/15 dark:bg-platinum/20 xs:w-1 sm:w-1.5"
   >
     <div
@@ -36,10 +37,16 @@ let stopFrame: (() => void) | null = null
 const updateIndicatorHeight = () => {
   if (!track.value || !indicator.value) return
   trackHeight = track.value.clientHeight
-  // Indicator height is ratio of track height to scrollYMax
+  /* Indicator height is ratio of track height to scrollYMax, capped at the
+   * track: a page only just longer than the viewport asks for an indicator
+   * several screens tall, which then also drags itself off the top of the
+   * track once (trackHeight - indicatorHeight) goes negative. */
   indicatorHeight =
     scrollYMax.value > 0
-      ? ((trackHeight / scrollYMax.value) * trackHeight) / 2
+      ? Math.min(
+          ((trackHeight / scrollYMax.value) * trackHeight) / 2,
+          trackHeight,
+        )
       : 0
   gsap.set(indicator.value, { height: indicatorHeight })
 }

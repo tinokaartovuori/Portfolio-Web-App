@@ -3,7 +3,7 @@
     ref="backgroundElement"
     type="button"
     role="switch"
-    class="z-10 flex h-8 w-16 cursor-pointer appearance-none items-center rounded-full p-1 transition-none"
+    class="relative z-10 flex h-8 w-16 cursor-pointer appearance-none items-center rounded-full p-1 transition-none"
     :aria-checked="checked"
     :aria-label="label"
     @click="toggle"
@@ -12,14 +12,17 @@
       ref="handleElement"
       class="absolute z-10 h-6 w-6 transform rounded-full transition-none"
     ></div>
-    <div ref="iconElement" class="fixed h-6 w-6 transition-none duration-[0]">
+    <div
+      ref="iconElement"
+      class="absolute h-6 w-6 transition-none duration-[0]"
+    >
       <div
         v-if="onIcon"
         ref="onIconElement"
         class="absolute bg-transparent transition-none duration-[0]"
         :style="`fill: ${colors.iconOn}; opacity: 0;`"
       >
-        <component :is="onIcon" name="on" />
+        <component :is="onIcon" aria-hidden="true" />
       </div>
       <div
         v-if="offIcon"
@@ -27,15 +30,16 @@
         class="absolute bg-transparent transition-none duration-[0]"
         :style="`fill: ${colors.iconOff}; opacity: 0;`"
       >
-        <component :is="offIcon" name="off" />
+        <component :is="offIcon" aria-hidden="true" />
       </div>
     </div>
   </button>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { PropType } from 'vue'
+import { usePreferredReducedMotion } from '@vueuse/core'
 import { gsap } from 'gsap'
 
 // Make an interface for Colors object
@@ -66,14 +70,15 @@ const props = defineProps({
     // Object containing {key, tailwind -class}
     type: Object as PropType<Colors>,
     required: false,
-    default: {
+    // A factory, or every instance would share the one default object
+    default: () => ({
       bgOff: '#DC2626',
       bgOn: '#059669',
       thumbOff: '#dde0ed',
       thumbOn: '#dde0ed',
       iconOn: '#dde0ed',
       iconOff: '#dde0ed',
-    },
+    }),
   },
   fadeIn: {
     type: Boolean,
@@ -98,19 +103,29 @@ const emits = defineEmits(['update:checked'])
 const colors = ref<Colors>(props.colors)
 const checked = ref<boolean>(props.checked)
 
-const timeline = gsap.timeline()
+const reducedMotion = usePreferredReducedMotion()
+const prefersReducedMotion = computed(() => reducedMotion.value === 'reduce')
+
+// The switch still has to arrive in its new state; only the travel is dropped.
+const motionDuration = (seconds: number) =>
+  prefersReducedMotion.value ? 0 : seconds
+
+// Built on mount rather than in setup: creating a timeline wakes gsap's ticker,
+// which during SSR would spin a timer in the render process for no reason.
+let timeline: ReturnType<typeof gsap.timeline> | null = null
 
 function toggle() {
   checked.value = !checked.value
   if (checked.value) {
-    useOn(0.5)
+    useOn(motionDuration(0.5))
   } else {
-    useOff(0.5)
+    useOff(motionDuration(0.5))
   }
   emits('update:checked', checked.value)
 }
 
 function useOn(duration: number) {
+  if (!timeline) return
   timeline.clear()
   timeline.to(
     backgroundElement.value,
@@ -167,6 +182,7 @@ function useOn(duration: number) {
 }
 
 function useOff(duration: number) {
+  if (!timeline) return
   timeline.clear()
   timeline.to(
     backgroundElement.value,
@@ -224,6 +240,7 @@ function useOff(duration: number) {
 }
 
 function startFadeIn() {
+  if (!timeline) return
   timeline.clear()
   timeline.to(backgroundElement.value, {
     duration: 0,
@@ -231,7 +248,7 @@ function startFadeIn() {
     ease: 'power1.inOut',
   })
   timeline.to(backgroundElement.value, {
-    duration: 0.8,
+    duration: motionDuration(0.8),
     opacity: 1,
     ease: 'power1.inOut',
   })
@@ -245,11 +262,12 @@ watch(
   (value) => {
     if (value === checked.value) return
     checked.value = value
-    value ? useOn(0.5) : useOff(0.5)
+    value ? useOn(motionDuration(0.5)) : useOff(motionDuration(0.5))
   },
 )
 
 onMounted(() => {
+  timeline = gsap.timeline()
   checked.value = props.checked
   if (checked.value) {
     useOn(0)
@@ -258,5 +276,11 @@ onMounted(() => {
   }
   if (!props.fadeIn) return
   startFadeIn()
+})
+
+onUnmounted(() => {
+  // gsap's root timeline holds on to this otherwise
+  timeline?.kill()
+  timeline = null
 })
 </script>

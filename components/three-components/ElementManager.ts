@@ -1,16 +1,45 @@
-import { Object3D, Scene } from 'three'
+import { Mesh, Scene } from 'three'
 import { IntroRectangle } from './IntroRectangle'
 
 /**
- * An Object3D that is pinned to a DOM element and therefore has to expose the
- * full lifecycle that ElementManager drives.
+ * A mesh pinned to a DOM element. It owns GPU resources of its own, so whoever
+ * drops it from the scene has to hand them back.
  */
-export interface TrackedObject3D extends Object3D {
+export interface DomPinnedMesh extends Mesh {
+  dispose(): void
+}
+
+/**
+ * The full lifecycle ElementManager drives on a tracked element. Declared as an
+ * interface rather than a shared base class because the classes implementing it
+ * live in modules this one imports: a base class here would close an import
+ * cycle and leave the subclasses extending an uninitialised binding.
+ */
+export interface TrackedObject3D extends DomPinnedMesh {
   update(): void
   updatePosition(): void
   updateAspectRatio(): void
-  dispose(): void
 }
+
+type TrackedObject3DConstructor = new (element: HTMLElement) => TrackedObject3D
+
+/**
+ * Every value an `<ElementTracker object="…">` prop may name. Adding an element
+ * type is one entry here, and `satisfies` turns a class that has drifted from
+ * the lifecycle into a compile error on this line rather than a method that
+ * throws on the first frame.
+ */
+const OBJECT_TYPES = {
+  IntroRectangle,
+} satisfies Record<string, TrackedObject3DConstructor>
+
+export type TrackedObjectName = keyof typeof OBJECT_TYPES
+
+// The prop is a free-form string, so the lookup has to admit a miss
+const OBJECT_TYPE_LOOKUP: Record<
+  string,
+  TrackedObject3DConstructor | undefined
+> = OBJECT_TYPES
 
 export default class ElementManager {
   scene: Scene
@@ -24,21 +53,26 @@ export default class ElementManager {
   loadElements(
     elements: Record<string, { element: HTMLElement; object: string }>,
   ) {
-    for (const [key, object] of Object.entries(elements)) {
-      const objectType = object.object
-      const objectElement = object.element
+    for (const [key, { element, object }] of Object.entries(elements)) {
+      const ObjectType = OBJECT_TYPE_LOOKUP[object]
 
-      if (objectType === 'IntroRectangle') {
-        const introRectangle = new IntroRectangle(
-          objectElement as HTMLDivElement,
-        )
-        this.elements.push(introRectangle)
-        this.scene.add(introRectangle)
-        introRectangle.update()
+      if (!ObjectType) {
+        // A typo in the prop renders nothing at all, with no error anywhere —
+        // miserable to diagnose from the symptom, so name it while developing
+        if (import.meta.dev) {
+          console.warn(
+            `[ElementManager] unknown object type "${object}" on threeReference "${key}": no mesh will be created. Known types: ${Object.keys(
+              OBJECT_TYPES,
+            ).join(', ')}.`,
+          )
+        }
         continue
       }
 
-      // Here we can add more element types
+      const trackedObject = new ObjectType(element)
+      this.elements.push(trackedObject)
+      this.scene.add(trackedObject)
+      trackedObject.update()
     }
   }
 

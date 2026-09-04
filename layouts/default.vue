@@ -17,7 +17,14 @@
 
     <!-- TODO: <Preloader /> -->
     <main id="main-content" class="relative z-10" tabindex="-1">
-      <slot />
+      <!--
+        One Lenis instance for the whole app. Mounted per page it was created
+        and destroyed on every navigation, and the outgoing instance's teardown
+        could zero the shared frame state after the incoming one had started.
+      -->
+      <ScrollContainer>
+        <slot />
+      </ScrollContainer>
     </main>
 
     <!-- BottomBar will be replaced with different component later and moved to child elements -->

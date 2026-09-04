@@ -6,6 +6,7 @@
         class="text-sm font-light text-onyx dark:text-platinum xs:text-base sm:text-xl md:text-2xl"
       />
       <div
+        aria-hidden="true"
         class="up-and-down px-2 text-sm font-light text-onyx dark:text-platinum xs:text-base sm:text-xl md:text-2xl"
       >
         ↓
@@ -14,13 +15,15 @@
   </transition>
 </template>
 
-<script setup>
-defineProps({
-  showComponent: {
-    type: Boolean,
-    required: false,
+<script setup lang="ts">
+withDefaults(
+  defineProps<{
+    showComponent?: boolean
+  }>(),
+  {
+    showComponent: false,
   },
-})
+)
 </script>
 
 <style scoped>
@@ -52,5 +55,17 @@ defineProps({
 
 .fade-leave-to /* .fade-leave-active in < 2.1.8 */ {
   opacity: 0;
+}
+
+/* The arrow bobs forever, so it is exactly what this preference is about. */
+@media (prefers-reduced-motion: reduce) {
+  .up-and-down {
+    animation: none;
+  }
+
+  .fade-enter-active,
+  .fade-leave-active {
+    transition-duration: 1ms;
+  }
 }
 </style>

@@ -32,6 +32,8 @@ let imageManager: ImageManager | null = null
 let elementManager: ElementManager | null = null
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
+let rebuildQueued = false
+let torndown = false
 const stopFrame: Array<() => void> = []
 
 onMounted(() => {
@@ -62,6 +64,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  torndown = true
+
   for (const stop of stopFrame) stop()
   stopFrame.length = 0
 
@@ -90,13 +94,28 @@ watch([width, height], () => {
   }, resizeDebounce)
 })
 
+/*
+ * A rebuild drops every mesh and re-uploads every texture, so it must happen
+ * once per burst rather than once per registration: trackers mount one after
+ * the other (and asynchronously, once content arrives from a content layer),
+ * and each of those lands as its own change on the registry.
+ */
 watch(threeObjectState, () => {
-  if (!imageManager || !elementManager) return
+  if (rebuildQueued) return
+  rebuildQueued = true
 
-  imageManager.removeImages()
-  elementManager.removeElements()
-  imageManager.loadImages(threeImageTracker.value)
-  elementManager.loadElements(threeElementTracker.value)
+  nextTick(() => {
+    rebuildQueued = false
+    // nextTick callbacks cannot be cancelled, so a teardown between the
+    // schedule and the flush has to be checked for here
+    if (torndown) return
+    if (!imageManager || !elementManager) return
+
+    imageManager.removeImages()
+    elementManager.removeElements()
+    imageManager.loadImages(threeImageTracker.value)
+    elementManager.loadElements(threeElementTracker.value)
+  })
 })
 
 const resize = () => {

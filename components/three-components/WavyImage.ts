@@ -1,5 +1,4 @@
 import {
-  Object3D,
   Mesh,
   Vector2,
   PlaneGeometry,
@@ -8,9 +7,9 @@ import {
   Texture,
   ShaderMaterial,
   DoubleSide,
-  MeshBasicMaterial,
 } from 'three'
 import { damp } from '~/composables/useFrameLoop'
+import type { DomPinnedMesh } from './ElementManager'
 
 /**
  * Decay rate of the scroll-speed smoothing, per second.
@@ -36,14 +35,27 @@ const MAX_DEFORMATION = 0.1
 const DEFORMATION_VELOCITY_SCALE = 2000
 
 /**
+ * The uniform set the shaders below declare. Spelling it out keeps the update
+ * path type-checked instead of indexing into `{ [name: string]: IUniform }`,
+ * where every `.value` is `any`.
+ */
+type WavyImageUniforms = {
+  uTexture: { value: Texture }
+  uScrollSpeed: { value: Vector2 }
+  uAlpha: { value: number }
+  uPlaneYPosition: { value: number }
+  uMouse: { value: Vector2 }
+  uPlaneRelativeYSize: { value: number }
+}
+
+/**
  * Class representing a wavy image in 3D space using THREE.js library
  */
-export default class WavyImage3D extends Object3D {
+export default class WavyImage3D
+  extends Mesh<PlaneGeometry, ShaderMaterial>
+  implements DomPinnedMesh
+{
   // Object properties
-  meshObject: Mesh
-  planeGeometry: PlaneGeometry
-  shaderMaterial: ShaderMaterial | MeshBasicMaterial
-
   imageElement: HTMLImageElement
   dimensions: Vector2
   positionOffset: Vector2
@@ -52,16 +64,14 @@ export default class WavyImage3D extends Object3D {
   scrollSpeedCurrent: number
 
   imageTexture: Texture
-  shaderUniforms: any
+  shaderUniforms: WavyImageUniforms
 
   /**
    * Creates a WavyImage3D object
    * @param {HTMLImageElement} imageElement - The image to display as a 3D object
    */
   constructor(imageElement: HTMLImageElement) {
-    super()
-
-    this.meshObject = new Mesh()
+    super(new PlaneGeometry(1, 1, 30, 30), new ShaderMaterial())
 
     this.imageElement = imageElement
     this.dimensions = new Vector2(0, 0)
@@ -70,12 +80,9 @@ export default class WavyImage3D extends Object3D {
     this.scrollSpeedTarget = 0
     this.scrollSpeedCurrent = 0
 
-    const { planeGeometry, imageTexture, shaderUniforms, shaderMaterial } =
-      this.createMeshObject()
-    this.planeGeometry = planeGeometry
+    const { imageTexture, shaderUniforms } = this.buildMaterial()
     this.imageTexture = imageTexture
     this.shaderUniforms = shaderUniforms
-    this.shaderMaterial = shaderMaterial
   }
 
   /**
@@ -92,17 +99,16 @@ export default class WavyImage3D extends Object3D {
   }
 
   /**
-   * Creates the mesh object
-   * @returns The geometry, texture, uniforms and material it was built from
+   * Loads the texture and builds the shader material this mesh renders with
+   * @returns The texture and uniforms it was built from
    */
-  createMeshObject() {
+  buildMaterial() {
     this.calculateDimensions()
-    const planeGeometry = new PlaneGeometry(1, 1, 30, 30)
     const imageTexture = new TextureLoader().load(this.imageElement.src)
     imageTexture.colorSpace = SRGBColorSpace
 
     // Set shader uniforms
-    const shaderUniforms = {
+    const shaderUniforms: WavyImageUniforms = {
       uTexture: { value: imageTexture },
       uScrollSpeed: { value: new Vector2(0, 0) },
       uAlpha: { value: 1 },
@@ -205,12 +211,12 @@ export default class WavyImage3D extends Object3D {
       side: DoubleSide,
     })
 
-    this.meshObject.geometry = planeGeometry
-    this.meshObject.material = shaderMaterial
-    this.meshObject.scale.set(this.dimensions.x, this.dimensions.y, 1)
-    this.add(this.meshObject)
+    // The placeholder handed to super() only existed to satisfy the base
+    this.material.dispose()
+    this.material = shaderMaterial
+    this.scale.set(this.dimensions.x, this.dimensions.y, 1)
 
-    return { planeGeometry, imageTexture, shaderUniforms, shaderMaterial }
+    return { imageTexture, shaderUniforms }
   }
 
   /**
@@ -224,10 +230,10 @@ export default class WavyImage3D extends Object3D {
     this.scrollSpeedTarget = scrollYVelocity
 
     // Update mesh position and scale
-    this.meshObject.position.x = this.positionOffset.x
-    this.meshObject.position.y = this.positionOffset.y
+    this.position.x = this.positionOffset.x
+    this.position.y = this.positionOffset.y
 
-    this.meshObject.scale.set(this.dimensions.x, this.dimensions.y, 1)
+    this.scale.set(this.dimensions.x, this.dimensions.y, 1)
 
     // Update shader uniforms
     this.shaderUniforms.uPlaneYPosition.value =
@@ -264,8 +270,8 @@ export default class WavyImage3D extends Object3D {
    * Dispose the mesh geometry, material and texture
    */
   dispose() {
-    this.planeGeometry.dispose()
-    this.shaderMaterial.dispose()
+    this.geometry.dispose()
+    this.material.dispose()
     this.imageTexture.dispose()
   }
 }

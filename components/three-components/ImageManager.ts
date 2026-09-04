@@ -11,8 +11,8 @@ export default class ImageManager {
   }
 
   loadImages(images: Record<string, HTMLImageElement>) {
-    for (const [key, imageElement] of Object.entries(images)) {
-      const image = new WavyImage(imageElement as HTMLImageElement)
+    for (const imageElement of Object.values(images)) {
+      const image = new WavyImage(imageElement)
       this.images.push(image)
       this.scene.add(image)
       // Place it once at rest; the frame loop takes over from the next tick

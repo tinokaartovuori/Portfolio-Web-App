@@ -1,0 +1,17 @@
+# Sample copy — replace with your own. Everything here is rendered as real DOM,
+# which is what the WebGL layer measures and pins its meshes to.
+title: Portfolio
+description: >-
+  Tino Kaartovuori builds interactive, motion-driven experiences for the
+  browser — WebGL, custom shaders and scroll design.
+
+hero:
+  lead: I build things for the browser that move the way you expect them to.
+  accent: Interaction, motion and WebGL.
+  cta:
+    label: See the work
+    to: '#work'
+
+work:
+  eyebrow: Selected work
+  heading: Four projects, and how they were built.

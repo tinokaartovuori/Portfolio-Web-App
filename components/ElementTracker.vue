@@ -20,7 +20,8 @@ const props = defineProps({
 })
 
 const reader = ref<HTMLElement | null>(null)
-let registered = false
+// The node we registered, so unmount can only ever drop our own entry
+let registered: HTMLElement | null = null
 
 onMounted(() => {
   if (!props.threeReference) return
@@ -36,14 +37,14 @@ onMounted(() => {
     firstChild,
     props.object,
   )
-  registered = true
+  registered = firstChild
 })
 
 onUnmounted(() => {
   // The registry is global, so a detached element has to drop out of it again
   if (!registered) return
-  threeObjectStateStore.remove(props.threeReference)
-  registered = false
+  threeObjectStateStore.remove(props.threeReference, registered)
+  registered = null
 })
 </script>
 
