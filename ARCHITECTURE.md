@@ -14,7 +14,8 @@ Still open:
 
 - **No real portfolio content.** The projects in `content/projects/` are plausible samples, not Tino's actual work.
 - **No preloader.** `layouts/default.vue` has a TODO for it; note that adding one changes what is mounted on first paint, so re-check the frame loop's stage order if you build it.
-- **The glass/refraction work is not started.** The scene still has no lights, no environment map and no tone mapping — every material is unlit. That is a prerequisite chain, not a tuning job.
+- **The glass/refraction work is not started.** The scene still has no lights, no environment map and no tone mapping — every material is unlit. The hooks are in place (`scene` for lights and `environment`, `Scenario.enablePostProcessing()` for screen-space passes, real 3D tilt on the images so lighting will read), but it remains a prerequisite chain, not a tuning job.
+- **Touch overscroll is untested on a real iPhone.** The rubber band was verified with synthetic touch events in Chromium; iOS Safari's own bounce may or may not honour `overscroll-behavior: none` on the root, and the band's stand-down guard for that case has only been reasoned about, not observed.
 
 ## Commands
 
@@ -47,15 +48,23 @@ The whole site is one idea: **a Three.js scene rendered behind the DOM, whose me
 
 Register with `onFrame(stage, cb)` (returns an unregister) or `useFrame(stage, cb)` (unregisters on unmount). **Never add your own `requestAnimationFrame` or `gsap.ticker.add` for anything that has to agree with scroll position** — that is exactly the desync this replaced.
 
-`dt` is in seconds and clamped to 1/30. `damp(current, target, lambda, dt)` from the same module is the only easing helper you should use; `x += (target - x) * k` decays per _frame_ and so behaves differently at 60, 120 and 144 Hz.
+`dt` is in seconds and clamped to 1/30. Two easing helpers exist and you should not write a third: `damp(current, target, lambda, dt)` from the same module for anything that only needs to approach a target, and `Spring` from `utils/spring.ts` (Framer-style `stiffness` / `damping` / `mass`, substepped semi-implicit Euler) for anything that should have mass and overshoot. `x += (target - x) * k` decays per _frame_ and so behaves differently at 60, 120 and 144 Hz.
 
-### 2. Scrolling is native, smoothed by Lenis
+**Every number that decides how the site feels lives in `motion.config.ts`** — scroll spring and speed cap, keyboard step, rubber-band stiffness, image trail, bubble depth, hover lift, lens size. Tune there; the motion code reads it and nothing else should carry a magic constant.
 
-The page scrolls natively. `components/ScrollContainer.vue` creates a Lenis instance (`composables/useSmoothScroll.ts`) with `autoRaf: false` and drives it from the frame loop's `scroll` stage. Keyboard, find-in-page, anchors, scroll restoration and pinch zoom therefore all work without any code.
+### 2. Scrolling is native, driven by a spring, with a rubber band at the edges
 
-`composables/useSmoothScroll.ts` also exports `scrollFrame` — a **plain, non-reactive** `{ y, velocity, max }`. The WebGL layer reads this directly; Vue reactivity does not belong in a 120 Hz path. `velocity` is in **pixels per second**.
+The page scrolls natively. `components/ScrollContainer.vue` calls `createSmoothScroll` (`composables/useSmoothScroll.ts`), which runs in the frame loop's `scroll` stage. Find-in-page, scroll restoration and pinch zoom therefore work without any code.
 
-Under `prefers-reduced-motion: reduce`, Lenis is created with `lerp: 1` and `smoothWheel: false`, i.e. plain native scrolling.
+**The integrator is ours, not Lenis'.** Wheel deltas (and keyboard: arrows, Page Up/Down, Space, Home, End; and same-page anchor clicks) move a _target_; the scroll position is a critically damped, velocity-capped `Spring` chasing that target, written to `window.scrollTo` every frame. Lenis' own lerp was measured and rejected: a first-order lerp restarts its velocity on every wheel notch (per-frame deltas went 8 → 11 → 14 → 15 px, one step per notch), which reads as a series of shoves; the spring keeps velocity continuous so notches blend into one swell. Lenis is still created (`lerp: 1`, `smoothWheel: false`) for what it does well — `limit` with its resize observers, the touch gesture stream, iOS quirks, the optional `syncTouch` mode — and its `virtualScroll` hook is where wheel deltas are taken over (`return false`) and touch deltas are watched. A scroll position the integrator did not write (a finger, the scrollbar, a restored position, find-in-page) is adopted as the new truth on the next frame, so it never fights the browser. Under reduced motion the integrator is bypassed and everything is native.
+
+**The rubber band.** Native scroll cannot go past its own edges, so `useSmoothScroll` translates the `ScrollContainer` wrapper instead (`transform: translate3d(0, overscroll, 0)`), driven by a second `Spring`. Three things feed it: wheel deltas past an edge (accumulated, then released at `overscroll.release` so the band eases home instead of snapping), a finger dragging past an edge (held while the finger is down, released into the spring on `touchend`), and momentum arriving at an edge (a share of the arrival velocity becomes a spring impulse — but only below `bounceMaxVelocity`, so a scroll-restoration jump lands dead; the integrator's own approach decelerates and never bounces). The meshes follow for free because they measure the translated DOM. The transform is removed entirely at rest so the document does not sit on a compositing layer. If iOS is ever observed rubber-banding natively (scroll position leaves `[0, max]`), the band stands down for the rest of the session rather than doubling the bounce. Two rules follow: everything that scrolls must live inside `ScrollContainer`, and nothing `position: fixed` may, because a transformed ancestor becomes its containing block.
+
+`composables/useSmoothScroll.ts` also exports `scrollFrame` — a **plain, non-reactive** `{ y, velocity, max, overscroll, reduced }`. The WebGL layer reads this directly; Vue reactivity does not belong in a 120 Hz path. `velocity` is in **pixels per second** and is the velocity of the content _as seen_, i.e. it includes the rubber band, so a bounce deforms the images just like a scroll does. `y` stays within `[0, max]`.
+
+Under `prefers-reduced-motion: reduce`, Lenis is created with `lerp: 1` and `smoothWheel: false`, i.e. plain native scrolling, and the rubber band never engages.
+
+Touch scrolling stays native (`syncTouch: false`): it stays on the compositor, and the band gives it the bounce anyway. `motion.config.ts` has the switch if identical Lenis inertia on touch is ever wanted.
 
 The OS scrollbar is hidden in CSS; `components/ScrollTrack.vue` draws the visible track/indicator from store state in the frame loop's `render` stage.
 
@@ -83,8 +92,9 @@ The registry is global and keyed by `threeReference`, so **`threeReference` has 
 
 Update flow, all via `watch`:
 
-- `onFrame('transform')` → `imageManager.updateImages(scrollFrame.velocity, dt)` + `elementManager.updateElementPositions()`
-- `onFrame('render')` → `scenario.render()`
+- `onFrame('transform')` → fills one reused `FrameContext` (`three-components/FrameContext.ts`: `dt`, `time`, `scroll` = `scrollFrame`, `pointer` = `pointerFrame`, `reduced`) and calls `imageManager.updateImages(ctx)` + `elementManager.updateElementPositions(ctx)`
+- `onFrame('render')` → `scenario.render()` — straight to the canvas, or through an `EffectComposer` when `scenario.enablePostProcessing(passes)` has been called (RenderPass → your passes → OutputPass, on a multisampled half-float target). Off by default (`POST_PROCESSING` in the canvas component) because it costs a full-screen target per frame; it is the hook for bloom, blur and glass. The renderer states `outputColorSpace = SRGBColorSpace` and `toneMapping = NoToneMapping` explicitly; when tone mapping goes on, OutputPass applies it to the photographs too.
+- `composables/usePointer.ts` → `pointerFrame`, the plain `{ x, y, hover, active }` cursor state the meshes read. `hover` is true only for a fine pointer that can hover, so a finger never triggers hover physics.
 - `watch([width, height])` (from `useWindowSize`, 100ms trailing debounce) → full update + camera/renderer resize
 - `watch(threeObjectState)` → tear down and rebuild all meshes (page navigation)
 - `onUnmounted` → unregister both frame callbacks, drop every mesh and dispose the renderer
@@ -104,9 +114,13 @@ offset.set(
 )
 ```
 
-An element class **is** the mesh — it extends `Mesh` rather than wrapping one in an `Object3D`, so there is no inner node to keep in sync and `this.geometry` / `this.material` are the typed pair three already maintains. It has to expose `update()`, `updatePosition()`, `updateAspectRatio()` and `dispose()`: that is the `TrackedObject3D` interface `ElementManager` types its array with, so a missing method is a compile error. `ImageManager` is the outlier: it stores `WavyImage[]` and only ever calls `update()` and `dispose()`, which is the smaller `DomPinnedMesh` contract `WavyImage` implements.
+An element class **is** the mesh — it extends `Mesh` rather than wrapping one in an `Object3D`, so there is no inner node to keep in sync and `this.geometry` / `this.material` are the typed pair three already maintains. It has to expose `update()` (full re-measure, effects at rest), `updatePosition(ctx)` (per frame), `updateAspectRatio()` and `dispose()`: that is the `TrackedObject3D` interface `ElementManager` types its array with, so a missing method is a compile error. `ImageManager` is the outlier: it stores `WavyImage[]` and calls `update(ctx)`, `resize()` and `dispose()`, which is the smaller `DomPinnedMesh` contract `WavyImage` implements.
 
-`WavyImage.ts` holds the signature effect: a `ShaderMaterial` with inline GLSL whose vertex shader bends the plane by smoothed scroll speed (`uScrollSpeed`, lerped by `smoothingFactor`) and by the plane's normalized viewport Y (`uPlaneYPosition`). Shaders are inline template strings, not separate `.glsl` files.
+**The DOM box is a target, not a position.** The `<img>` a `WavyImage` follows is invisible, so the mesh is free to deviate from it by a few tens of pixels, and the physics live in that freedom: the mesh trails the box through a spring (`lag`), bends by a share of that trail, recedes in z while scrolling fast, drifts a few pixels at rest, and under a fine pointer lifts toward the camera, tilts toward the cursor and shows a gaussian "liquid lens" (a vertex bulge plus a UV magnification and radial chromatic aberration). Every one of those is a `Spring` or a `damp()` fed by the `FrameContext`, so all of it settles the same way at 60 and 144 Hz, and every amount is a number in `motion.config.ts`. `IntroRectangle` gets the same trail with a smaller amplitude. Under `ctx.reduced` every class snaps to its box and does nothing else.
+
+**Where an image is on screen decides how it moves.** The vertex shader gets the plane's centre and size in viewport units (`uScreenCenter`, `uScreenSize`, viewport spanning [-1, 1]) and computes each vertex's own screen position. While scrolling, the page behaves as a bubble seen face-on: vertices near the viewport centre come toward the camera and those near the edges go away (`bubble.depth`), each mesh tilts away from the centre and drifts outward in proportion to its screen offset (`bubble.tilt`, `bubble.spread`), and the trail sags on the side of the plane nearer the centre — so a left-hand image and a right-hand one deform as mirror images, and an image changes shape as it travels up the screen. All of it is scaled by `energy`, the smoothed scroll magnitude (`energySmoothing`, slower than the velocity smoothing so the bubble swells and relaxes as one motion instead of pulsing with each wheel notch). At rest the mesh sits exactly on its box.
+
+`WavyImage.ts` keeps its shaders as inline template strings, not separate `.glsl` files. The fragment shader ends with `#include <colorspace_fragment>`, which pairs with `texture.colorSpace = SRGBColorSpace` — one without the other double-encodes the image — and does the right thing under an `EffectComposer` too (linear target, `OutputPass` encodes).
 
 ### 7. Content
 
@@ -127,7 +141,13 @@ Two consequences worth knowing before changing the content layer:
 
 Images referenced from content must be same-origin (i.e. under `public/`). They are loaded into a WebGL texture, so a cross-origin URL without CORS headers fails and the element collapses to zero size.
 
-### 8. Theming and assets
+### 8. The fixed bars and the hero
+
+`TopBar` and `BottomBar` are `Bar` components hung from the viewport edge at `--bar-offset`, with `--bar-height` for what they hold and `--bar-safe` for the sum; all three are CSS variables in `index.css`, stepped per breakpoint. `Bar` can carry a `.bar-veil`: a solid page-colour band under a long gradient mask (`mask-image`, so the global 600ms colour transition carries it through a theme switch), reaching from the viewport edge to `--bar-safe + 5rem`, so content scrolling under the name and the navigation fades out instead of colliding with them. Only the top bar uses it (`BottomBar` passes `veil: false`: the scroll prompt is gone before any content reaches it). The veil stays off while over the hero: `Bar` compares the hero's bottom edge (from `heroHeight` in the scroll store, set by the page) with the veil's bottom edge and fades it in once the hero has scrolled past, i.e. as the first content passes under the bar. On a page without a hero it is on from the start. The same trigger slides the top bar up to `--bar-offset-compact` (`compact` prop, a transform so it stays on the compositor) to give the scrolled page more room; over the hero it sits at `--bar-offset`. Both states are gated on `mounted`: the layout renders the bars before the page's setup has announced its hero, and a server-rendered "on" would survive hydration (class mismatches are check-only), so the server and the hydrating client always render "off". The home page announces its hero as `Infinity` before its first `await` and replaces that with the measured height. Per-control halos and a bottom veil were both tried and dropped.
+
+The hero on the home page pads itself past `--bar-safe` on both edges, so its text sits between the bars at every viewport. When it still cannot fit (a landscape phone, a small window: the section's border box grows past the viewport), the page sets `scrollPromptSuppressed` on the scroll store and `BottomBar` hides the prompt rather than letting it land on the text. A page that sets the flag clears it on unmount.
+
+### 9. Theming and assets
 
 - Dark/light via `@nuxtjs/color-mode` with `classSuffix: ''`, matching Tailwind's `darkMode: 'class'`. `ThemeSwitch.vue` writes `useColorMode().preference` and reads the resolved `useColorMode().value` back for the switch position. Custom palette is just two colors: `onyx` (#0c0d12) / `platinum` (#dde0ed); the global 600ms color transition in `index.css` is what makes theme switching feel smooth.
 - Google Fonts (Outfit) are **downloaded and inlined as base64** into `assets/fonts/` by `@nuxtjs/google-fonts` (`overwriting: false`). Treat that directory as generated — never hand-edit it, and don't grep it (the base64 blobs will flood results).

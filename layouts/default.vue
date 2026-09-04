@@ -12,7 +12,7 @@
     </ClientOnly>
 
     <header>
-      <TopBar class="z-50" />
+      <TopBar />
     </header>
 
     <!-- TODO: <Preloader /> -->
@@ -28,7 +28,7 @@
     </main>
 
     <!-- BottomBar will be replaced with different component later and moved to child elements -->
-    <BottomBar class="z-50" />
+    <BottomBar />
     <ScrollTrack />
   </div>
 </template>

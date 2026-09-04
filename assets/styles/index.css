@@ -40,6 +40,103 @@ body {
   min-height: 100%;
 }
 
+/*
+ * The fixed bars' geometry, in one place: their offset from the viewport edge
+ * and the height of what they hold (a 2xl line, the theme switch). Bar.vue
+ * positions itself from these, and the hero pads itself past `--bar-safe` so
+ * its text can never sit under a bar, whatever the viewport.
+ */
+:root {
+  --bar-offset: 2rem;
+  /* Where the top bar sits once the page is scrolled: closer to the edge */
+  --bar-offset-compact: 1rem;
+  --bar-height: 2rem;
+  --bar-safe: calc(var(--bar-offset) + var(--bar-height));
+}
+
+@media (min-width: 640px) {
+  :root {
+    --bar-offset: 3rem;
+    --bar-offset-compact: 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --bar-offset: 4rem;
+    --bar-offset-compact: 1.5rem;
+  }
+}
+
+/*
+ * The top bar slides up to its compact offset once the hero has scrolled past
+ * it, giving the page more room; over the hero it sits at --bar-offset. A
+ * transform rather than a change of `top`, so it stays on the compositor.
+ */
+.bar-slide {
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-compact {
+  transform: translateY(calc(var(--bar-offset-compact) - var(--bar-offset)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-slide {
+    transition-duration: 1ms;
+  }
+}
+
+/*
+ * A feathered wash of the page colour behind each bar, so content scrolling
+ * under the name, the navigation and the scroll prompt fades out instead of
+ * colliding with them. A solid colour under a gradient mask rather than a
+ * gradient background, so the global 600ms colour transition carries it
+ * through a theme switch like everything else. Bar.vue fades it in with
+ * `.bar-veil-on` once the bar is no longer over the hero.
+ */
+.bar-veil {
+  background-color: #dde0ed;
+  height: calc(var(--bar-safe) + 5rem);
+  opacity: 0;
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.95) 0%,
+    rgb(0 0 0 / 0.8) 35%,
+    rgb(0 0 0 / 0.45) 60%,
+    rgb(0 0 0 / 0.12) 85%,
+    transparent 100%
+  );
+  transition:
+    opacity 600ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-veil-bottom {
+  mask-image: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.95) 0%,
+    rgb(0 0 0 / 0.8) 35%,
+    rgb(0 0 0 / 0.45) 60%,
+    rgb(0 0 0 / 0.12) 85%,
+    transparent 100%
+  );
+}
+
+.bar-veil-on {
+  opacity: 1;
+}
+
+html.dark .bar-veil {
+  background-color: #0c0d12;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-veil {
+    transition-duration: 1ms;
+  }
+}
+
 body {
   overscroll-behavior-y: none;
 }

@@ -1,5 +1,6 @@
 <template>
-  <Bar class="fixed bottom-8 sm:bottom-12 md:bottom-16">
+  <!-- No veil here: the prompt is gone by the time content reaches it -->
+  <Bar edge="bottom" :veil="false">
     <ScrollToDiscover :showComponent="scrollToDiscoverVisible" />
   </Bar>
 </template>
@@ -10,7 +11,8 @@ import { useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
 const scrollStateStore = useScrollStateStore()
-const { scrollY, scrollYMax } = storeToRefs(scrollStateStore)
+const { scrollY, scrollYMax, scrollPromptSuppressed } =
+  storeToRefs(scrollStateStore)
 
 const { height } = useWindowSize()
 
@@ -23,9 +25,13 @@ const { height } = useWindowSize()
  * The bottom check matters on a page only slightly taller than the viewport:
  * there the whole scrollable range can sit inside the threshold, so without it
  * the prompt would keep inviting a scroll that has already run out.
+ *
+ * A page can also suppress it outright: the home page does when its hero does
+ * not fit the viewport, because the prompt would then sit on the hero's text.
  */
 const scrollToDiscoverVisible = computed(
   () =>
+    !scrollPromptSuppressed.value &&
     scrollYMax.value > 0 &&
     scrollY.value < scrollYMax.value &&
     scrollY.value <= height.value / 3,

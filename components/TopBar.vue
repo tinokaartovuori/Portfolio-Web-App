@@ -1,5 +1,5 @@
 <template>
-  <Bar class="fixed top-8 sm:top-12 md:top-16">
+  <Bar edge="top" compact>
     <div class="flex items-center justify-center xs:mr-2 sm:mr-4 md:mr-6">
       <NuxtLink
         to="/"

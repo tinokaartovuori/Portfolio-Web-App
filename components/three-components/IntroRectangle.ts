@@ -1,6 +1,12 @@
 import { Mesh, MeshBasicMaterial, ShapeGeometry, Vector2 } from 'three'
 import { RoundedRectangleShape } from './RoundedRectangleShape'
+import { damp } from '~/composables/useFrameLoop'
+import { Spring } from '~/utils/spring'
+import { motion } from '~/motion.config'
 import type { TrackedObject3D } from './ElementManager'
+import type { FrameContext } from './FrameContext'
+
+const config = motion.introRectangle
 
 export class IntroRectangle
   extends Mesh<ShapeGeometry, MeshBasicMaterial>
@@ -14,6 +20,11 @@ export class IntroRectangle
 
   padding: number
   cornerRadius: number
+
+  /** Smoothed scroll velocity, px/s. */
+  private velocity = 0
+  /** Vertical trail behind the DOM box, px — a hint of depth behind the text. */
+  private lag = new Spring(config.lag)
 
   constructor(element: HTMLElement) {
     // The geometry is a placeholder until the element has been measured; the
@@ -63,6 +74,7 @@ export class IntroRectangle
     this.meshSizes.copy(this.sizes)
   }
 
+  /** Full re-measure with the trail at rest. */
   update() {
     this.updateShape()
   }
@@ -75,17 +87,33 @@ export class IntroRectangle
       this.buildGeometry()
     }
 
-    this.updatePosition()
+    this.lag.set(0)
+    this.position.set(this.offset.x, this.offset.y, 0)
   }
 
   updateAspectRatio() {
     this.updateShape()
   }
 
-  updatePosition() {
+  updatePosition(ctx: FrameContext) {
     this.getDimensions()
-    this.position.y = this.offset.y
-    this.position.x = this.offset.x
+
+    if (ctx.reduced) {
+      this.position.set(this.offset.x, this.offset.y, 0)
+      return
+    }
+
+    this.velocity = damp(
+      this.velocity,
+      ctx.scroll.velocity,
+      motion.image.velocitySmoothing,
+      ctx.dt,
+    )
+    const drive = Math.tanh(this.velocity / motion.image.velocityScale)
+    this.lag.target = -config.lag.max * drive
+    this.lag.update(ctx.dt)
+
+    this.position.set(this.offset.x, this.offset.y + this.lag.value, 0)
   }
 
   calculatePadding() {

@@ -1,5 +1,6 @@
 import { Mesh, Scene } from 'three'
 import { IntroRectangle } from './IntroRectangle'
+import type { FrameContext } from './FrameContext'
 
 /**
  * A mesh pinned to a DOM element. It owns GPU resources of its own, so whoever
@@ -16,8 +17,10 @@ export interface DomPinnedMesh extends Mesh {
  * cycle and leave the subclasses extending an uninitialised binding.
  */
 export interface TrackedObject3D extends DomPinnedMesh {
+  /** Full re-measure and rebuild, with every effect at rest. */
   update(): void
-  updatePosition(): void
+  /** Per-frame placement and physics. */
+  updatePosition(ctx: FrameContext): void
   updateAspectRatio(): void
 }
 
@@ -92,7 +95,7 @@ export default class ElementManager {
     this.elements.forEach((element) => element.updateAspectRatio())
   }
 
-  updateElementPositions() {
-    this.elements.forEach((element) => element.updatePosition())
+  updateElementPositions(ctx: FrameContext) {
+    this.elements.forEach((element) => element.updatePosition(ctx))
   }
 }

@@ -21,6 +21,24 @@ export const useScrollStateStore = defineStore('scroll-state-store', () => {
   const scrollYVelocity = ref(0)
   /** Maximum scrollable offset, in pixels. */
   const scrollYMax = ref(0)
+  /**
+   * Set by a page whose first screen cannot fit the viewport, so the fixed
+   * "scroll to discover" prompt does not land on top of its text. Pages that
+   * set it are responsible for clearing it on unmount.
+   */
+  const scrollPromptSuppressed = ref(false)
+  /**
+   * Border-box height of the current page's hero, or 0 when the page has
+   * none. The fixed bars use it to know when their controls have stopped
+   * being over the hero. Set and cleared by the page, like the flag above.
+   */
+  const heroHeight = ref(0)
 
-  return { scrollY, scrollYVelocity, scrollYMax }
+  return {
+    scrollY,
+    scrollYVelocity,
+    scrollYMax,
+    scrollPromptSuppressed,
+    heroHeight,
+  }
 })

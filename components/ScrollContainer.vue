@@ -1,11 +1,11 @@
 <template>
-  <div class="relative z-10 w-full">
+  <div ref="content" class="relative z-10 w-full">
     <slot />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useScrollStateStore } from '~/store/scrollState'
@@ -13,21 +13,29 @@ import { createSmoothScroll, scrollFrame } from '~/composables/useSmoothScroll'
 import { onFrame } from '~/composables/useFrameLoop'
 
 /*
- * Scrolling is native again. The page used to be pinned with
+ * Scrolling is native. The page used to be pinned with
  * `position: fixed; overflow: hidden` on html/body while a forked
  * smooth-scrollbar transformed a wrapper, which cost keyboard scrolling,
  * find-in-page, anchor links, scroll restoration and pinch zoom, and whose
  * integrator had no delta-time term. Lenis smooths the real scroll position
  * instead, so all of that works again for free.
+ *
+ * The one thing native scrolling cannot do is go past its own edges, so the
+ * rubber band translates this wrapper instead. Everything that scrolls has to
+ * live inside it, and nothing fixed may — a transformed ancestor becomes the
+ * containing block of fixed descendants.
  */
 const scrollStateStore = useScrollStateStore()
 const { scrollY, scrollYMax, scrollYVelocity } = storeToRefs(scrollStateStore)
+
+const content = ref<HTMLElement | null>(null)
 
 let smoothScroll: ReturnType<typeof createSmoothScroll> | null = null
 let stopPublish: (() => void) | null = null
 
 onMounted(() => {
-  smoothScroll = createSmoothScroll()
+  if (!content.value) return
+  smoothScroll = createSmoothScroll(content.value)
 
   // Mirror the frame state into the store once per frame for the reactive
   // consumers (ScrollTrack, BottomBar). The WebGL layer reads scrollFrame

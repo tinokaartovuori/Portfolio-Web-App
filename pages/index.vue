@@ -5,9 +5,16 @@
     coming from markdown still ends up with a mesh, exactly as hand-written
     markup did.
   -->
+  <!--
+    The hero pads itself past the fixed bars (--bar-safe, see index.css) on
+    both edges, so however short or narrow the viewport its text sits between
+    the name and the scroll prompt rather than under either. When it still
+    cannot fit, the scroll prompt is suppressed instead (see the script).
+  -->
   <ElementTracker threeReference="hero" object="IntroRectangle">
     <section
-      class="flex min-h-[100svh] w-full items-center px-[8vw] pb-32 pt-40 sm:px-[10vw] md:pt-48"
+      ref="hero"
+      class="flex min-h-[100svh] w-full items-center px-[8vw] pb-[calc(var(--bar-safe)_+_2rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] sm:px-[10vw]"
     >
       <div class="w-full">
         <h1
@@ -99,9 +106,49 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watchEffect, onUnmounted } from 'vue'
+import { useElementSize, useWindowSize } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { useScrollStateStore } from '~/store/scrollState'
+
+const { scrollPromptSuppressed, heroHeight: storedHeroHeight } = storeToRefs(
+  useScrollStateStore(),
+)
+
+// Declared before the first await, so it is in the store before any sibling
+// mounts: the bars would otherwise show their veil over the hero for the
+// first frames, until the hero's real height arrives
+storedHeroHeight.value = Number.POSITIVE_INFINITY
+
 const { data: home } = await useAsyncData('home', () =>
   queryCollection('home').first(),
 )
+
+/*
+ * The hero is min-h-[100svh] with its text centred between the bar-safe
+ * paddings, so it only grows past the viewport when the text cannot fit
+ * (a landscape phone, a small window). The fixed scroll prompt would then
+ * sit on the text, so it is switched off for as long as that is the case.
+ */
+const hero = ref<HTMLElement | null>(null)
+// Border box: the padding is the whole point, so the content box would say
+// the hero fits when its text is already under the bars
+const { height: heroHeight } = useElementSize(hero, undefined, {
+  box: 'border-box',
+})
+const { height: windowHeight } = useWindowSize()
+watchEffect(() => {
+  scrollPromptSuppressed.value =
+    heroHeight.value > 0 && heroHeight.value > windowHeight.value + 1
+  // The fixed bars fade their veil in once the hero has scrolled past them
+  storedHeroHeight.value =
+    heroHeight.value > 0 ? heroHeight.value : Number.POSITIVE_INFINITY
+})
+
+onUnmounted(() => {
+  scrollPromptSuppressed.value = false
+  storedHeroHeight.value = 0
+})
 
 const { data: projects } = await useAsyncData('projects', () =>
   queryCollection('projects').order('order', 'ASC').all(),

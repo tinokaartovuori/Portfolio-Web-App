@@ -8,6 +8,7 @@
 import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
 import ElementManager from './three-components/ElementManager'
+import type { FrameContext } from './three-components/FrameContext'
 
 import type { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -16,9 +17,17 @@ import { useThreeObjectStateStore } from '~/store/threeObjectState'
 import { useWindowSize } from '@vueuse/core'
 import { onFrame } from '~/composables/useFrameLoop'
 import { scrollFrame } from '~/composables/useSmoothScroll'
+import { pointerFrame, createPointerTracker } from '~/composables/usePointer'
 
 // Trailing debounce for window resizes, so a drag only rebuilds once it settles
 const resizeDebounce = 100
+
+/*
+ * Screen-space passes (bloom, blur, glass) go through an EffectComposer, which
+ * costs a full-screen render target per frame and so stays off until a pass
+ * needs it. Flip this and hand the passes to `enablePostProcessing`.
+ */
+const POST_PROCESSING = false
 
 const threeObjectState = useThreeObjectStateStore()
 const { threeElementTracker, threeImageTracker } = storeToRefs(threeObjectState)
@@ -35,13 +44,25 @@ let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 let rebuildQueued = false
 let torndown = false
 const stopFrame: Array<() => void> = []
+let stopPointer: (() => void) | null = null
+
+// One context object, reused every frame, so the update path allocates nothing
+const frame: FrameContext = {
+  dt: 0,
+  time: 0,
+  scroll: scrollFrame,
+  pointer: pointerFrame,
+  reduced: false,
+}
 
 onMounted(() => {
   if (!threeCanvas.value) return
 
   scenario = new Scenario(threeCanvas.value)
+  if (POST_PROCESSING) scenario.enablePostProcessing()
   imageManager = new ImageManager(scenario.scene)
   elementManager = new ElementManager(scenario.scene)
+  stopPointer = createPointerTracker()
 
   imageManager.loadImages(threeImageTracker.value)
   elementManager.loadElements(threeElementTracker.value)
@@ -54,10 +75,13 @@ onMounted(() => {
    * draw could happen before or after the transform depending on mount order.
    */
   stopFrame.push(
-    onFrame('transform', (dt) => {
+    onFrame('transform', (dt, time) => {
       if (!imageManager || !elementManager) return
-      imageManager.updateImages(scrollFrame.velocity, dt)
-      elementManager.updateElementPositions()
+      frame.dt = dt
+      frame.time = time
+      frame.reduced = scrollFrame.reduced
+      imageManager.updateImages(frame)
+      elementManager.updateElementPositions(frame)
     }),
     onFrame('render', () => scenario?.render()),
   )
@@ -68,6 +92,8 @@ onUnmounted(() => {
 
   for (const stop of stopFrame) stop()
   stopFrame.length = 0
+  stopPointer?.()
+  stopPointer = null
 
   if (resizeTimeout !== null) {
     clearTimeout(resizeTimeout)
@@ -76,7 +102,7 @@ onUnmounted(() => {
 
   imageManager?.removeImages()
   elementManager?.removeElements()
-  scenario?.renderer.dispose()
+  scenario?.dispose()
 
   imageManager = null
   elementManager = null
@@ -121,7 +147,7 @@ watch(threeObjectState, () => {
 const resize = () => {
   if (!scenario || !imageManager || !elementManager) return
 
-  imageManager.updateImages(scrollFrame.velocity, 0)
+  imageManager.resizeImages()
   elementManager.updateElements()
 
   scenario.updateCameraSize(width.value, height.value)
