@@ -45,7 +45,9 @@
     </section>
   </ElementTracker>
 
-  <section id="work" class="w-full px-[8vw] pb-40 sm:px-[10vw]">
+  <Marquee v-if="home?.marquee" :words="home.marquee" />
+
+  <section id="work" class="w-full px-[8vw] pb-40 pt-16 sm:px-[10vw] md:pt-24">
     <header class="mb-20 md:mb-28">
       <p
         class="mb-4 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
@@ -125,6 +127,37 @@
       </li>
     </ol>
   </section>
+
+  <section
+    v-if="about"
+    class="w-full px-[8vw] pb-24 sm:px-[10vw] md:pb-32 lg:px-[14vw]"
+  >
+    <p
+      class="mb-6 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
+    >
+      {{ home?.about.eyebrow }}
+    </p>
+    <p
+      class="max-w-[34ch] text-2xl font-light leading-snug tracking-tight text-onyx dark:text-platinum sm:text-3xl md:text-4xl"
+    >
+      {{ about.standfirst }}
+    </p>
+    <Magnetic class="mt-10">
+      <NuxtLink
+        to="/about"
+        class="group inline-flex items-baseline gap-3 text-base text-onyx dark:text-platinum sm:text-lg"
+      >
+        <span class="border-b border-current/30 pb-1">{{
+          home?.about.link
+        }}</span>
+        <span
+          aria-hidden="true"
+          class="inline-block transition-transform duration-300 group-hover:translate-x-1"
+          >→</span
+        >
+      </NuxtLink>
+    </Magnetic>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -142,9 +175,7 @@ const { scrollPromptSuppressed, heroHeight: storedHeroHeight } = storeToRefs(
 // first frames, until the hero's real height arrives
 storedHeroHeight.value = Number.POSITIVE_INFINITY
 
-const { data: home } = await useAsyncData('home', () =>
-  queryCollection('home').first(),
-)
+const { data: home } = await useHomeContent()
 
 /*
  * The hero is min-h-[100svh] with its text centred between the bar-safe
@@ -175,6 +206,9 @@ onUnmounted(() => {
 const { data: projects } = await useAsyncData('projects', () =>
   queryCollection('projects').order('order', 'ASC').all(),
 )
+
+// The teaser shows the about page's standfirst
+const { data: about } = await useAboutContent()
 
 useSeoMeta({
   title: () => home.value?.title ?? 'Portfolio',

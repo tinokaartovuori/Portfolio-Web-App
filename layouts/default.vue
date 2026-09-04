@@ -24,6 +24,7 @@
       -->
       <ScrollContainer>
         <slot />
+        <SiteFooter />
       </ScrollContainer>
     </main>
 

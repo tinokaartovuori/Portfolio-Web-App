@@ -5,11 +5,14 @@ page updates — no component edits, no rebuild step in development.
 
 ## Where things live
 
-| File            | What it controls                                                                |
-| --------------- | ------------------------------------------------------------------------------- |
-| `home.yml`      | The headline, the line under it, the button, the section heading above the work |
-| `projects/*.md` | One file per project. Frontmatter is the card; the body is the project page     |
-| `about.md`      | The about page — frontmatter for the standfirst, body for the prose             |
+| File            | What it controls                                                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `home.yml`      | The headline, the line under it, the button, the running band of words, the section heading above the work, the about teaser, the footer |
+| `projects/*.md` | One file per project. Frontmatter is the card; the body is the project page                                                              |
+| `about.md`      | The about page — frontmatter for the standfirst (also shown as the teaser on the home page), body for the prose                          |
+
+The footer (`contact` in `home.yml`) appears on every page: the heading, the
+email address, the links and the "back to top" label are all there.
 
 ## Adding a project
 

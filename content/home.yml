@@ -12,6 +12,34 @@ hero:
     label: See the work
     to: '#work'
 
+# The running band between the hero and the work. Short phrases; they repeat.
+marquee:
+  - WebGL
+  - Shaders
+  - Scroll design
+  - Motion systems
+  - Nuxt
+  - Three.js
+  - Creative frontend
+
 work:
   eyebrow: Selected work
   heading: Four projects, and how they were built.
+
+# The short about block after the work; the text itself is about.md's standfirst
+about:
+  eyebrow: About
+  link: More about me
+
+# The footer, on every page
+contact:
+  eyebrow: Contact
+  heading: Let's make something that moves.
+  email: hello@example.com
+  name: Tino Kaartovuori
+  links:
+    - label: GitHub
+      to: https://github.com/
+    - label: LinkedIn
+      to: https://www.linkedin.com/
+  backToTop: Back to top

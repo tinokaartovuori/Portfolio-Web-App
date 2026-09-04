@@ -275,6 +275,19 @@ export const motion = {
     parallax: 0.08,
   },
 
+  /** The running band of words between the hero and the work (Marquee.vue). */
+  marquee: {
+    /** Speed on its own, px/s, leftward. */
+    baseSpeed: 60,
+    /** Share of the smoothed scroll velocity added to it: scrolling down
+     * speeds it up, scrolling up slows or reverses it. */
+    velocityGain: 0.12,
+    /** Speed cap either way, px/s. */
+    maxSpeed: 900,
+    /** Lean at full scroll drive, degrees of skew. */
+    skew: 6,
+  },
+
   /** The custom cursor (Cursor.vue): a dot on the pointer, a ring behind it. */
   cursor: {
     /** The ring chases the pointer through this: quick, a hint of lag. */

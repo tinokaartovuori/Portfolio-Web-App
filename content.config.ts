@@ -23,9 +23,25 @@ export default defineContentConfig({
           accent: z.string(),
           cta: z.object({ label: z.string(), to: z.string() }),
         }),
+        /** The running band between the hero and the work. */
+        marquee: z.array(z.string()),
         work: z.object({
           eyebrow: z.string(),
           heading: z.string(),
+        }),
+        /** The about teaser after the work; its text is about.md's standfirst. */
+        about: z.object({
+          eyebrow: z.string(),
+          link: z.string(),
+        }),
+        /** The footer, rendered on every page. */
+        contact: z.object({
+          eyebrow: z.string(),
+          heading: z.string(),
+          email: z.string(),
+          name: z.string(),
+          links: z.array(z.object({ label: z.string(), to: z.string() })),
+          backToTop: z.string(),
         }),
       }),
     }),

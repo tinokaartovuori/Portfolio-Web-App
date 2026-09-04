@@ -21,9 +21,7 @@
 </template>
 
 <script setup lang="ts">
-const { data: about } = await useAsyncData('about', () =>
-  queryCollection('about').first(),
-)
+const { data: about } = await useAboutContent()
 
 useSeoMeta({
   title: () => about.value?.title ?? 'About',
