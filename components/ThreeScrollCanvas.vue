@@ -8,6 +8,7 @@
 import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
 import ElementManager from './three-components/ElementManager'
+import LightCloud from './three-components/LightCloud'
 import type { FrameContext } from './three-components/FrameContext'
 
 import type { Ref } from 'vue'
@@ -45,6 +46,8 @@ const themeTarget = () => (colorMode.value === 'dark' ? 1 : 0)
 let scenario: Scenario | null = null
 let imageManager: ImageManager | null = null
 let elementManager: ElementManager | null = null
+// The one thing in the scene not pinned to an element: depth, for its own sake
+let lightCloud: LightCloud | null = null
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
 let rebuildQueued = false
@@ -72,6 +75,7 @@ onMounted(() => {
   if (POST_PROCESSING) scenario.enablePostProcessing()
   imageManager = new ImageManager(scenario.scene)
   elementManager = new ElementManager(scenario.scene)
+  lightCloud = new LightCloud(scenario.scene)
   stopPointer = createPointerTracker()
 
   imageManager.loadImages(threeImageTracker.value)
@@ -98,6 +102,7 @@ onMounted(() => {
         : damp(frame.theme, theme, motion.theme.smoothing, dt)
       imageManager.updateImages(frame)
       elementManager.updateElementPositions(frame)
+      lightCloud?.update(frame)
     }),
     onFrame('render', () => scenario?.render()),
   )
@@ -118,10 +123,12 @@ onUnmounted(() => {
 
   imageManager?.removeImages()
   elementManager?.removeElements()
+  lightCloud?.dispose()
   scenario?.dispose()
 
   imageManager = null
   elementManager = null
+  lightCloud = null
   scenario = null
 })
 
@@ -165,6 +172,7 @@ const resize = () => {
 
   imageManager.resizeImages()
   elementManager.updateElements()
+  lightCloud?.resize()
 
   scenario.updateCameraSize(width.value, height.value)
   scenario.updateRendererSize(width.value, height.value)

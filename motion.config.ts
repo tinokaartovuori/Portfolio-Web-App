@@ -335,6 +335,40 @@ export const motion = {
     grain: 3,
   },
 
+  /**
+   * The light cloud (LightCloud): large soft lights through the whole page at
+   * different depths, in the hero's palette. Depth is real — the camera's
+   * own parallax — so the deeper ones drift past slowly and the nearer ones
+   * quickly, larger and softer.
+   */
+  lightCloud: {
+    count: 18,
+    /** Depth range in world units: `[farthest, nearest]`; the page is at 0
+     * and the camera at 1000. Positive is in front of the page. */
+    depth: [-750, 320],
+    /** Screen size at rest, px, `[smallest, largest]`. */
+    size: [160, 420],
+    /** Where the lights sit across the viewport at their depth, as a share
+     * of it; over 1 lets some sit off the edge. */
+    spread: 1.15,
+    /** Peak alpha, `[light, dark]` theme. */
+    intensity: [0.16, 0.24],
+    /** Idle wander: rad/s and px (at the page's depth). */
+    drift: { speed: 0.18, amplitude: 36 },
+    /** Vertical elongation at full scroll energy, as a share. */
+    stretch: 0.5,
+    /** The trail, in the images' terms, scaled by depth. */
+    lag: { max: 40, stiffness: 90, damping: 18 },
+    /** The pointer pulls a light within `radius` px by up to `strength` of
+     * the distance, through a slow spring. */
+    cursor: {
+      radius: 360,
+      strength: 0.3,
+      spring: { stiffness: 40, damping: 11 },
+    },
+    grain: 3,
+  },
+
   /** The index row above each project (ProjectIndex.vue). */
   index: {
     /** The rule draws from nothing to full width while the row travels this
