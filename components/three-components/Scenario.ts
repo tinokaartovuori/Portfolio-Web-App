@@ -28,6 +28,13 @@ import type { Pass } from 'three/addons/postprocessing/Pass.js'
  * `enablePostProcessing()` for screen-space passes — without touching the
  * DOM mapping.
  */
+/**
+ * World units between the camera and z=0. A mesh placed off the z=0 plane has
+ * to scale its position and size by `(PERSPECTIVE + depth) / PERSPECTIVE` to
+ * keep its screen footprint; see GlowPlate.
+ */
+export const PERSPECTIVE = 1000
+
 export default class Scenario {
   scene: Scene
   camera: PerspectiveCamera
@@ -45,7 +52,7 @@ export default class Scenario {
     this.height = window.innerHeight
 
     this.scene = new Scene()
-    this.perspective = 1000
+    this.perspective = PERSPECTIVE
     this.fov =
       (180 * (2 * Math.atan(this.height / 2 / this.perspective))) / Math.PI
     this.aspectRatio = this.width / this.height

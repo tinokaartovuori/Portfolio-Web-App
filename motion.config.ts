@@ -239,6 +239,42 @@ export const motion = {
     },
   },
 
+  /**
+   * Glow plates (GlowPlate): one soft light behind each project image, in the
+   * hero's palette, set back in z and trailing more loosely than the image.
+   */
+  glowPlate: {
+    /** How far behind the z=0 plane the plate sits, world units. Past the
+     * deepest the image itself can recede, so the depth test keeps it behind. */
+    depth: 120,
+    /** Plate size as a multiple of the image box. */
+    grow: 1.6,
+    /** Gaussian sigma in UV units of the plate's height. */
+    sigma: 0.22,
+    /** Peak alpha at the centre, `[light, dark]` theme. */
+    intensity: [0.3, 0.4],
+    /** Extra intensity, as a share, with the pointer over the image. */
+    hoverBoost: 0.6,
+    /** Extra intensity, as a share, at full scroll energy. */
+    energyBoost: 0.25,
+    /** Looser and larger than the image's trail, so they separate and rejoin. */
+    lag: { max: 48, stiffness: 90, damping: 17 },
+    hoverSpring: { stiffness: 120, damping: 20 },
+    grain: 3,
+  },
+
+  /** The index row above each project (ProjectIndex.vue). */
+  index: {
+    /** The rule draws from nothing to full width while the row travels this
+     * share of the viewport height up from the bottom edge. */
+    drawSpan: 0.35,
+    /** Decay rate per second of the draw progress. */
+    drawSmoothing: 10,
+    /** The numeral drifts against the scroll by this share of its distance
+     * from the viewport centre. */
+    parallax: 0.08,
+  },
+
   /** The custom cursor (Cursor.vue): a dot on the pointer, a ring behind it. */
   cursor: {
     /** The ring chases the pointer through this: quick, a hint of lag. */

@@ -60,47 +60,67 @@
     </header>
 
     <ol class="flex flex-col gap-32 md:gap-44">
-      <li
-        v-for="(project, index) in projects"
-        :key="project.id"
-        class="flex flex-col gap-8 md:flex-row md:items-start md:gap-16"
-        :class="index % 2 === 1 ? 'md:flex-row-reverse' : ''"
-      >
-        <div class="w-full md:w-3/5">
-          <ThreeImage
-            :threeReference="`project-${project.stem}`"
-            :imageUrl="project.image"
-            :alt="project.imageAlt"
-          />
-        </div>
+      <li v-for="(project, index) in projects" :key="project.id">
+        <ProjectIndex :index="index" />
 
-        <div class="flex w-full flex-col md:w-2/5 md:pt-2">
-          <p
-            class="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
+        <div
+          class="flex flex-col gap-8 md:flex-row md:items-start md:gap-16"
+          :class="index % 2 === 1 ? 'md:flex-row-reverse' : ''"
+        >
+          <!--
+            The tracker's own div is the flex child, so the column width goes
+            on it; the link inside is the box the glow plate follows, and the
+            image the box measures. `glow-` and `project-` keep the two ids
+            apart in the shared registry.
+          -->
+          <ElementTracker
+            class="w-full md:w-3/5"
+            :threeReference="`glow-${project.stem}`"
+            object="GlowPlate"
+            :variant="index % 2 === 1 ? 'cool' : 'accent'"
           >
-            {{ project.year }} — {{ project.role }}
-          </p>
-          <h3
-            class="text-xl font-normal tracking-tight text-onyx dark:text-platinum sm:text-2xl md:text-3xl"
-          >
-            {{ project.title }}
-          </h3>
-          <p
-            class="mt-4 max-w-[42ch] text-base leading-relaxed text-onyx/70 dark:text-platinum/70 sm:text-lg"
-          >
-            {{ project.summary }}
-          </p>
-          <NuxtLink
-            :to="project.path"
-            class="group mt-8 inline-flex w-fit items-baseline gap-2 text-sm text-onyx dark:text-platinum sm:text-base"
-          >
-            <span class="border-b border-current/30 pb-1">Read more</span>
-            <span
-              aria-hidden="true"
-              class="inline-block transition-transform duration-300 group-hover:translate-x-1"
-              >→</span
+            <NuxtLink
+              :to="project.path"
+              class="block"
+              data-cursor="view"
+              :aria-label="`View ${project.title}`"
             >
-          </NuxtLink>
+              <ThreeImage
+                :threeReference="`project-${project.stem}`"
+                :imageUrl="project.image"
+                :alt="project.imageAlt"
+              />
+            </NuxtLink>
+          </ElementTracker>
+
+          <div class="flex w-full flex-col md:w-2/5 md:pt-2">
+            <p
+              class="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
+            >
+              {{ project.year }} — {{ project.role }}
+            </p>
+            <h3
+              class="text-xl font-normal tracking-tight text-onyx dark:text-platinum sm:text-2xl md:text-3xl"
+            >
+              {{ project.title }}
+            </h3>
+            <p
+              class="mt-4 max-w-[42ch] text-base leading-relaxed text-onyx/70 dark:text-platinum/70 sm:text-lg"
+            >
+              {{ project.summary }}
+            </p>
+            <NuxtLink
+              :to="project.path"
+              class="group mt-8 inline-flex w-fit items-baseline gap-2 text-sm text-onyx dark:text-platinum sm:text-base"
+            >
+              <span class="border-b border-current/30 pb-1">Read more</span>
+              <span
+                aria-hidden="true"
+                class="inline-block transition-transform duration-300 group-hover:translate-x-1"
+                >→</span
+              >
+            </NuxtLink>
+          </div>
         </div>
       </li>
     </ol>

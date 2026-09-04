@@ -1,5 +1,6 @@
 import { Mesh, Scene } from 'three'
 import { LightField } from './LightField'
+import { GlowPlate } from './GlowPlate'
 import type { FrameContext } from './FrameContext'
 
 /**
@@ -42,6 +43,7 @@ type TrackedObject3DConstructor = new (
  */
 const OBJECT_TYPES = {
   LightField,
+  GlowPlate,
 } satisfies Record<string, TrackedObject3DConstructor>
 
 export type TrackedObjectName = keyof typeof OBJECT_TYPES
