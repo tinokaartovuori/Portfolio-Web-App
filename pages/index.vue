@@ -63,7 +63,10 @@
 
     <ol class="flex flex-col gap-32 md:gap-44">
       <li v-for="(project, index) in projects" :key="project.id">
-        <ProjectIndex :index="index" />
+        <ProjectIndex
+          :index="index"
+          :threeReference="`shape-${project.stem}`"
+        />
 
         <div
           class="flex flex-col gap-8 md:flex-row md:items-start md:gap-16"

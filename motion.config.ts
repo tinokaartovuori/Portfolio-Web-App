@@ -118,8 +118,8 @@ export const motion = {
    * a faint pane on either.
    */
   palette: {
-    accent: [0xbe185d, 0xec4899],
-    cool: [0x3730a3, 0x60a5fa],
+    accent: [0xdb2777, 0xec4899],
+    cool: [0x4f46e5, 0x60a5fa],
     base: [0x0c0d12, 0xdde0ed],
   },
 
@@ -187,6 +187,23 @@ export const motion = {
     zoom: 0.92,
     /** Vertical parallax inside the frame, in UV units per viewport height. */
     parallax: 0.1,
+
+    /**
+     * Glitch on a hard scroll: horizontal slices of the image tear sideways
+     * once |drive| passes `start`, fully by `full`. Which slices tear, and
+     * how far, is re-rolled `rate` times a second.
+     */
+    glitch: {
+      start: 0.55,
+      full: 0.9,
+      /** Slices across the image's height. */
+      slices: 22,
+      rate: 9,
+      /** Furthest tear, in UV units. */
+      shift: 0.05,
+      /** Share of slices torn at full glitch. */
+      share: 0.35,
+    },
   },
 
   /**
@@ -195,13 +212,22 @@ export const motion = {
    * the same thing.
    */
   lightField: {
-    /** The cursor light chases the pointer through this: slow and liquid. */
-    cursorSpring: { stiffness: 60, damping: 14 },
-    /** How quickly the cursor light brightens and dims as the pointer
+    /**
+     * Every light moves through this spring, so the orbit is smooth and the
+     * one following the cursor is liquid rather than glued to it.
+     */
+    spring: { stiffness: 60, damping: 14 },
+    /** How quickly the followed light brightens and dims as the pointer
      * enters and leaves the plate. */
     hoverSpring: { stiffness: 120, damping: 20 },
-    /** Extra intensity on the cursor light while the pointer is over the plate. */
+    /** Extra intensity on the light under the pointer. */
     cursorBoost: 0.5,
+    /**
+     * A light stays where the pointer left it and carries on from there; it
+     * drifts back toward its own seat on the ring at this rate per second —
+     * slow enough to read as its own wandering, not a snap back.
+     */
+    settle: 0.04,
     /** Vertical elongation of every light at full scroll energy, as a share. */
     stretch: 0.6,
     /** Extra intensity at full scroll energy, as a share. */
@@ -210,16 +236,24 @@ export const motion = {
     grain: 3,
     presets: {
       hero: {
-        /** Lights in the field, at most 6; the last one follows the cursor. */
+        /** Lights in the field, at most 6. */
         lights: 5,
         /** Gaussian sigma of one light, as a share of the plate's shorter side. */
         radius: 0.2,
-        /** Orbit speed (rad/s, scaled per light) and amplitude (UV units). */
-        drift: { speed: 0.12, amplitude: 0.22 },
+        /**
+         * The lights sit evenly on a ring around the plate's centre (radii in
+         * UV units) that turns slowly as a whole, and each wobbles around its
+         * seat. Even seats keep them from piling up on one another.
+         */
+        orbit: {
+          spin: 0.1,
+          ring: [0.32, 0.28],
+          wobble: { speed: 0.4, amplitude: 0.07 },
+        },
         /** Peak alpha of one light, `[light, dark]` theme. */
-        intensity: [0.3, 0.38],
+        intensity: [0.5, 0.42],
         /** Alpha of the frosted plate itself, `[light, dark]` theme. */
-        baseAlpha: [0.03, 0.04],
+        baseAlpha: [0.02, 0.04],
         /** The plate is drawn this many px inside the element's box. */
         inset: 20,
         cornerRadius: 24,
@@ -228,10 +262,14 @@ export const motion = {
       },
       footer: {
         lights: 3,
-        radius: 0.4,
-        drift: { speed: 0.09, amplitude: 0.18 },
-        intensity: [0.28, 0.5],
-        baseAlpha: [0.03, 0.04],
+        radius: 0.36,
+        orbit: {
+          spin: 0.08,
+          ring: [0.34, 0.2],
+          wobble: { speed: 0.3, amplitude: 0.06 },
+        },
+        intensity: [0.45, 0.5],
+        baseAlpha: [0.02, 0.04],
         inset: 0,
         cornerRadius: 28,
         lag: { max: 10, stiffness: 120, damping: 20 },
@@ -249,12 +287,17 @@ export const motion = {
     depth: 120,
     /** Plate size as a multiple of the image box. */
     grow: 1.6,
-    /** Gaussian sigma in UV units of the plate's height. */
-    sigma: 0.22,
-    /** Peak alpha at the centre, `[light, dark]` theme. */
-    intensity: [0.3, 0.4],
+    /**
+     * The glow follows the image's own outline: full inside it, falling off
+     * as a gaussian of the distance from its edge, with this sigma in px.
+     */
+    spread: 48,
+    /** Corner radius of that outline, px. */
+    cornerRadius: 6,
+    /** Peak alpha at the edge, `[light, dark]` theme. */
+    intensity: [0.2, 0.22],
     /** Extra intensity, as a share, with the pointer over the image. */
-    hoverBoost: 0.6,
+    hoverBoost: 0.5,
     /** Extra intensity, as a share, at full scroll energy. */
     energyBoost: 0.25,
     /** Looser and larger than the image's trail, so they separate and rejoin. */
@@ -270,9 +313,32 @@ export const motion = {
     drawSpan: 0.35,
     /** Decay rate per second of the draw progress. */
     drawSmoothing: 10,
-    /** The numeral drifts against the scroll by this share of its distance
-     * from the viewport centre. */
+    /** The shape's box drifts against the scroll by this share of its
+     * distance from the viewport centre. */
     parallax: 0.08,
+  },
+
+  /**
+   * Wireframe shapes (WireShape): a cube, a pyramid, an octahedron and an
+   * icosahedron in the index rows, turning with the scroll and toward the
+   * pointer.
+   */
+  wireShape: {
+    /** Shape size as a share of the box's shorter side. */
+    fill: 0.78,
+    /** Turn at rest, rad/s, and the extra turn at full scroll drive. */
+    idleSpin: 0.25,
+    scrollSpin: 2.2,
+    hoverSpring: { stiffness: 140, damping: 18 },
+    /** Growth under the pointer, as a share. */
+    lift: 0.18,
+    /** Tilt toward the cursor, radians at the box edge. */
+    tilt: 0.55,
+    tiltSpring: { stiffness: 120, damping: 16 },
+    /** Line opacity, `[light, dark]` theme, and the extra under the pointer. */
+    opacity: [0.55, 0.5],
+    hoverOpacity: 0.35,
+    lag: { max: 10, stiffness: 120, damping: 20 },
   },
 
   /** The running band of words between the hero and the work (Marquee.vue). */

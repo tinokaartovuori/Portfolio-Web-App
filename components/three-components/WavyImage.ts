@@ -51,6 +51,13 @@ type WavyImageUniforms = {
   uLensBulge: { value: number }
   uLensZoom: { value: number }
   uHoverAberration: { value: number }
+  /** 0 at rest, 1 on the hardest scroll: how much of the image tears. */
+  uGlitch: { value: number }
+  uTime: { value: number }
+  uGlitchSlices: { value: number }
+  uGlitchRate: { value: number }
+  uGlitchShift: { value: number }
+  uGlitchShare: { value: number }
 }
 
 const vertexShader = /* glsl */ `
@@ -108,7 +115,17 @@ const fragmentShader = /* glsl */ `
   uniform float uLensRadius;
   uniform float uLensZoom;
   uniform float uHoverAberration;
+  uniform float uGlitch;
+  uniform float uTime;
+  uniform float uGlitchSlices;
+  uniform float uGlitchRate;
+  uniform float uGlitchShift;
+  uniform float uGlitchShare;
   varying vec2 vUv;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
 
   void main() {
     vec2 uv = vUv;
@@ -118,12 +135,25 @@ const fragmentShader = /* glsl */ `
     float lens = exp(-dot(d, d) / (2.0 * uLensRadius * uLensRadius));
     uv = uMouse + (uv - uMouse) * (1.0 - uHover * uLensZoom * lens);
 
+    // Glitch: on a hard scroll some horizontal slices tear sideways. Which
+    // ones and how far is re-rolled a few times a second, so it flickers
+    // rather than slides.
+    float tear = 0.0;
+    if (uGlitch > 0.0) {
+      float frame = floor(uTime * uGlitchRate);
+      float band = floor(uv.y * uGlitchSlices);
+      float on = step(1.0 - uGlitch * uGlitchShare, hash(vec2(band, frame)));
+      tear = on * (hash(vec2(frame, band)) * 2.0 - 1.0) * uGlitchShift * uGlitch;
+      uv.x += tear;
+    }
+
     // Overscan, centred, then slide the crop with the plane's viewport position
     uv = (uv - 0.5) * uZoom + 0.5;
     uv.y += uParallax;
 
-    // Chromatic aberration: along the scroll axis with speed, radial under the lens
-    vec2 shift = vec2(0.0, uAberration) + (uv - uMouse) * lens * uHover * uHoverAberration;
+    // Chromatic aberration: along the scroll axis with speed, radial under
+    // the lens, and sideways in a torn slice
+    vec2 shift = vec2(tear * 0.4, uAberration) + (uv - uMouse) * lens * uHover * uHoverAberration;
     float r = texture2D(uTexture, uv + shift).r;
     float g = texture2D(uTexture, uv).g;
     float b = texture2D(uTexture, uv - shift).b;
@@ -225,6 +255,12 @@ export default class WavyImage
       uLensBulge: { value: hover.lensBulge },
       uLensZoom: { value: hover.lensZoom },
       uHoverAberration: { value: aberration.hover },
+      uGlitch: { value: 0 },
+      uTime: { value: 0 },
+      uGlitchSlices: { value: config.glitch.slices },
+      uGlitchRate: { value: config.glitch.rate },
+      uGlitchShift: { value: config.glitch.shift },
+      uGlitchShare: { value: config.glitch.share },
     }
 
     const shaderMaterial = new ShaderMaterial({
@@ -322,6 +358,7 @@ export default class WavyImage
       uniforms.uEnergy.value = 0
       uniforms.uAberration.value = 0
       uniforms.uHover.value = 0
+      uniforms.uGlitch.value = 0
       return
     }
 
@@ -389,6 +426,17 @@ export default class WavyImage
     uniforms.uAberration.value = config.aberration.scroll * drive
     uniforms.uHover.value = hoverAmount
     uniforms.uMouse.value.set(this.cursorX.value, this.cursorY.value)
+
+    // The glitch only exists past a hard scroll: nothing at a gentle glide,
+    // ramping up between the two thresholds
+    const { glitch } = config
+    const speed = Math.abs(drive)
+    const ramp = Math.min(
+      1,
+      Math.max(0, (speed - glitch.start) / (glitch.full - glitch.start)),
+    )
+    uniforms.uGlitch.value = ramp * ramp * (3 - 2 * ramp)
+    uniforms.uTime.value = time
   }
 
   /** Dispose the mesh geometry, material and texture. */

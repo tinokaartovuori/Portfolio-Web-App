@@ -42,7 +42,9 @@ type LightFieldUniforms = {
   uBaseAlpha: { value: number }
   /** Peak alpha of one light. */
   uIntensity: { value: number }
-  /** Intensity multiplier on the last light, the one under the cursor. */
+  /** Which light is (or was last) under the pointer, -1 for none. */
+  uCursorIndex: { value: number }
+  /** Intensity multiplier on that light. */
   uCursorBoost: { value: number }
   /** Vertical elongation from scroll energy, 1 at rest. */
   uStretch: { value: number }
@@ -71,6 +73,7 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uBase;
   uniform float uBaseAlpha;
   uniform float uIntensity;
+  uniform int uCursorIndex;
   uniform float uCursorBoost;
   uniform float uStretch;
   uniform float uGrain;
@@ -94,7 +97,7 @@ const fragmentShader = /* glsl */ `
       dl.y /= uStretch;
       float sigma = uLights[i].z;
       float g = exp(-dot(dl, dl) / (2.0 * sigma * sigma)) * uIntensity;
-      if (i == uLightCount - 1) g *= uCursorBoost;
+      if (i == uCursorIndex) g *= uCursorBoost;
       vec3 c = mix(uColorA, uColorB, uLights[i].w);
       float aOut = g + a * (1.0 - g);
       col = (c * g + col * a * (1.0 - g)) / max(aOut, 1e-4);
@@ -119,11 +122,14 @@ const fragmentShader = /* glsl */ `
 /**
  * Soft lights drifting behind a frosted plate, pinned to a DOM box.
  *
- * Each light is a gaussian on a slow, deterministic orbit; the last one is
- * pulled to the cursor while the pointer is over the box and eases back to
- * its orbit when it leaves. Scroll energy stretches and brightens the field,
- * and the whole plate trails its box like the images do. The palette is two
- * hues blended per theme, so a switch fades the lights along with the page.
+ * The lights sit evenly on a ring that turns slowly as a whole, each
+ * wobbling around its seat, and every one moves through a spring. While the
+ * pointer is over the plate the nearest light follows it; when the pointer
+ * leaves, that light stays where it was dropped and carries on wobbling from
+ * there, easing back toward its seat over the next minute or so. Scroll
+ * energy stretches and brightens the field, and the whole plate trails its
+ * box like the images do. The palette is two hues blended per theme, so a
+ * switch fades the lights along with the page.
  *
  * `variant` names a preset in `motion.lightField.presets`: the hero and the
  * footer are the same class with different counts, sizes and insets.
@@ -143,8 +149,14 @@ export class LightField
   /** Vertical trail behind the DOM box, px. */
   private lag: Spring
   private hover = new Spring(config.hoverSpring)
-  private cursorX = new Spring(config.cursorSpring, 0.5)
-  private cursorY = new Spring(config.cursorSpring, 0.5)
+
+  /** Each light's drawn position, in UV, through a spring. */
+  private lightX: Spring[] = []
+  private lightY: Spring[] = []
+  /** Where each light was left relative to its seat, in UV. */
+  private offsets: Vector2[] = []
+  /** The light following the pointer, -1 for none. */
+  private follower = -1
 
   private accent: [Color, Color]
   private cool: [Color, Color]
@@ -162,6 +174,15 @@ export class LightField
     this.base = [new Color(palette.base[0]), new Color(palette.base[1])]
 
     this.shaderUniforms = this.buildMaterial()
+
+    const count = this.shaderUniforms.uLightCount.value
+    for (let i = 0; i < count; i++) {
+      this.seat(i, 0, orbitScratch)
+      this.lightX.push(new Spring(config.spring, orbitScratch.x))
+      this.lightY.push(new Spring(config.spring, orbitScratch.y))
+      this.offsets.push(new Vector2())
+    }
+
     this.update()
   }
 
@@ -169,9 +190,8 @@ export class LightField
     const count = Math.min(this.preset.lights, MAX_LIGHTS)
     const lights: Vector4[] = []
     for (let i = 0; i < MAX_LIGHTS; i++) {
-      // Alternate the two hues; the cursor light (last) takes the accent
-      const mix = i === count - 1 ? 0 : i % 2
-      lights.push(new Vector4(0.5, 0.5, 1, mix))
+      // The two hues alternate around the ring
+      lights.push(new Vector4(0.5, 0.5, 1, i % 2))
     }
 
     const uniforms: LightFieldUniforms = {
@@ -184,6 +204,7 @@ export class LightField
       uBase: { value: new Color() },
       uBaseAlpha: { value: 0 },
       uIntensity: { value: 0 },
+      uCursorIndex: { value: -1 },
       uCursorBoost: { value: 1 },
       uStretch: { value: 1 },
       uGrain: { value: config.grain },
@@ -227,7 +248,7 @@ export class LightField
     )
   }
 
-  /** Full re-measure with the trail at rest. */
+  /** Full re-measure with the trail at rest; the lights keep their places. */
   update() {
     this.measure()
     this.applySize()
@@ -249,25 +270,43 @@ export class LightField
   }
 
   /**
-   * Light `i`'s place on its orbit at time `t`, in UV. The phases are
-   * derived from the index rather than drawn at random: the scene is rebuilt
-   * on every registration, and lights that jumped on each rebuild would give
-   * that away.
+   * Light `i`'s seat at time `t`, in UV: its place on the turning ring plus
+   * its own wobble. Phases come from the index rather than from random
+   * numbers: the scene is rebuilt on every registration, and lights that
+   * jumped on each rebuild would give that away.
    */
-  private orbit(i: number, t: number, out: Vector2) {
-    const { drift } = this.preset
+  private seat(i: number, t: number, out: Vector2) {
+    const { orbit } = this.preset
     const count = this.shaderUniforms.uLightCount.value
-    const phase = (i / count) * Math.PI * 2
-    const speed = drift.speed * (1 + 0.17 * i)
+    const angle = (i / count) * Math.PI * 2 + t * orbit.spin
+    const { wobble } = orbit
+    const speed = wobble.speed * (1 + 0.2 * i)
     out.set(
       0.5 +
-        0.28 * Math.cos(phase) +
-        drift.amplitude * Math.cos(t * speed + phase),
+        orbit.ring[0] * Math.cos(angle) +
+        wobble.amplitude * Math.cos(t * speed + i * 2.1),
       0.5 +
-        0.22 * Math.sin(phase) +
-        drift.amplitude * Math.sin(t * speed * 0.73 + phase),
+        orbit.ring[1] * Math.sin(angle) +
+        wobble.amplitude * Math.sin(t * speed * 0.8 + i * 1.7),
     )
     return out
+  }
+
+  /** The light drawn nearest the pointer, measured in plate px. */
+  private nearest(cursor: Vector2) {
+    const { x: width, y: height } = this.shaderUniforms.uSize.value
+    let best = 0
+    let bestDistance = Infinity
+    for (let i = 0; i < this.lightX.length; i++) {
+      const dx = (this.lightX[i]!.value - cursor.x) * width
+      const dy = (this.lightY[i]!.value - cursor.y) * height
+      const distance = dx * dx + dy * dy
+      if (distance < bestDistance) {
+        bestDistance = distance
+        best = i
+      }
+    }
+    return best
   }
 
   updatePosition(ctx: FrameContext) {
@@ -285,16 +324,20 @@ export class LightField
     const { energy } = this.feel
 
     if (ctx.reduced) {
-      // A still field: every light on its orbit at t=0, nothing under the cursor
+      // A still field: every light on its seat at t=0, nothing under the cursor
       this.lag.set(0)
       this.position.set(this.offset.x, this.offset.y, 0)
       for (let i = 0; i < count; i++) {
-        const light = u.uLights.value[i]!
-        this.orbit(i, 0, orbitScratch)
-        light.set(orbitScratch.x, orbitScratch.y, sigma, light.w)
+        this.seat(i, 0, orbitScratch)
+        this.lightX[i]!.set(orbitScratch.x)
+        this.lightY[i]!.set(orbitScratch.y)
+        this.offsets[i]!.set(0, 0)
+        u.uLights.value[i]!.set(orbitScratch.x, orbitScratch.y, sigma, i % 2)
       }
-      u.uStretch.value = 1
+      this.follower = -1
+      u.uCursorIndex.value = -1
       u.uCursorBoost.value = 1
+      u.uStretch.value = 1
       u.uIntensity.value = themed(preset.intensity, ctx.theme)
       return
     }
@@ -304,16 +347,9 @@ export class LightField
     this.lag.update(dt)
     this.position.set(this.offset.x, this.offset.y + this.lag.value, 0)
 
-    // Every light but the last drifts on its orbit
-    for (let i = 0; i < count - 1; i++) {
-      const light = u.uLights.value[i]!
-      this.orbit(i, ctx.time, orbitScratch)
-      light.set(orbitScratch.x, orbitScratch.y, sigma, light.w)
-    }
-
-    // The last light follows the cursor over the plate, and otherwise
-    // chases its own orbit — so it re-joins the field on its own when the
-    // pointer leaves, from wherever it was
+    // The pointer takes the nearest light when it arrives; when it leaves,
+    // the light is left where it is — its displacement from its seat becomes
+    // an offset it carries on from — so nothing snaps back
     const { x: width, y: height } = u.uSize.value
     const left = window.innerWidth / 2 + this.position.x - width / 2
     const top = window.innerHeight / 2 - this.position.y - height / 2
@@ -325,21 +361,41 @@ export class LightField
       height,
       cursorScratch,
     )
-    const target = cursor ?? this.orbit(count - 1, ctx.time, orbitScratch)
-    this.cursorX.target = target.x
-    this.cursorY.target = target.y
-    this.cursorX.update(dt)
-    this.cursorY.update(dt)
+    if (cursor) {
+      if (this.follower < 0) this.follower = this.nearest(cursor)
+      u.uCursorIndex.value = this.follower
+    } else if (this.follower >= 0) {
+      const i = this.follower
+      this.seat(i, ctx.time, orbitScratch)
+      this.offsets[i]!.set(
+        this.lightX[i]!.value - orbitScratch.x,
+        this.lightY[i]!.value - orbitScratch.y,
+      )
+      this.follower = -1
+    }
+
+    const relax = Math.exp(-config.settle * dt)
+    for (let i = 0; i < count; i++) {
+      const x = this.lightX[i]!
+      const y = this.lightY[i]!
+      if (i === this.follower && cursor) {
+        x.target = cursor.x
+        y.target = cursor.y
+      } else {
+        const offset = this.offsets[i]!
+        offset.multiplyScalar(relax)
+        this.seat(i, ctx.time, orbitScratch)
+        x.target = orbitScratch.x + offset.x
+        y.target = orbitScratch.y + offset.y
+      }
+      x.update(dt)
+      y.update(dt)
+      u.uLights.value[i]!.set(x.value, y.value, sigma, i % 2)
+    }
+
     this.hover.target = cursor ? 1 : 0
     this.hover.update(dt)
     const hover = Math.max(0, this.hover.value)
-    const cursorLight = u.uLights.value[count - 1]!
-    cursorLight.set(
-      this.cursorX.value,
-      this.cursorY.value,
-      sigma,
-      cursorLight.w,
-    )
 
     u.uCursorBoost.value = 1 + config.cursorBoost * hover
     u.uStretch.value = 1 + config.stretch * energy

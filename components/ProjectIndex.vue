@@ -1,35 +1,57 @@
 <template>
   <!--
-    The row above each project: a large outlined numeral and a rule that
-    draws itself as the row enters the viewport. Decorative — the list itself
-    carries the order — so it is hidden from assistive technology.
+    The row above each project: a wireframe solid drawn by the WebGL layer in
+    the box on the left, a rule that draws itself as the row enters the
+    viewport, and the number. Decorative — the list itself carries the order
+    — so it is hidden from assistive technology.
   -->
-  <div ref="row" aria-hidden="true" class="mb-8 flex items-end gap-6 md:mb-10">
+  <div
+    ref="row"
+    aria-hidden="true"
+    class="mb-8 flex items-center gap-6 md:mb-10 md:gap-8"
+  >
+    <ElementTracker
+      :threeReference="threeReference"
+      object="WireShape"
+      :variant="shape"
+    >
+      <div
+        ref="box"
+        class="h-20 w-20 will-change-transform md:h-28 md:w-28"
+      ></div>
+    </ElementTracker>
     <span
-      ref="numeral"
-      class="index-numeral leading-none font-light tracking-tight text-onyx select-none dark:text-platinum"
+      ref="rule"
+      class="index-rule h-px flex-1 origin-left bg-onyx/30 dark:bg-platinum/30"
+    ></span>
+    <span
+      class="font-mono text-xs tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
     >
       {{ String(index + 1).padStart(2, '0') }}
     </span>
-    <span
-      ref="rule"
-      class="index-rule mb-3 h-px flex-1 origin-left bg-onyx/30 dark:bg-platinum/30"
-    ></span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { gsap } from 'gsap'
 import { useFrame, damp } from '~/composables/useFrameLoop'
 import { motion } from '~/motion.config'
+import type { WireShapeName } from '~/components/three-components/WireShape'
 
-defineProps<{ index: number }>()
+const props = defineProps<{
+  index: number
+  /** Unique across every tracker on the page; see ElementTracker. */
+  threeReference: string
+}>()
 
 const config = motion.index
 
+const SHAPES: WireShapeName[] = ['cube', 'pyramid', 'octahedron', 'icosahedron']
+const shape = computed(() => SHAPES[props.index % SHAPES.length])
+
 const row = ref<HTMLElement | null>(null)
-const numeral = ref<HTMLElement | null>(null)
+const box = ref<HTMLElement | null>(null)
 const rule = ref<HTMLElement | null>(null)
 
 let reduced = false
@@ -44,10 +66,10 @@ onMounted(() => {
 })
 
 useFrame('render', (dt) => {
-  if (reduced || !row.value || !numeral.value || !rule.value) return
+  if (reduced || !row.value || !box.value || !rule.value) return
   if (!setScale || !setY) {
     setScale = gsap.quickSetter(rule.value, 'scaleX') as (v: number) => void
-    setY = gsap.quickSetter(numeral.value, 'y', 'px') as (v: number) => void
+    setY = gsap.quickSetter(box.value, 'y', 'px') as (v: number) => void
   }
 
   // Measure the row, not the rule: a rect includes the element's own
@@ -66,6 +88,7 @@ useFrame('render', (dt) => {
     setScale(scale)
   }
 
+  // The box moves and the mesh follows it, since the mesh measures the box
   const y = Math.round(
     (rect.top + rect.height / 2 - viewport / 2) * -config.parallax,
   )
@@ -77,18 +100,6 @@ useFrame('render', (dt) => {
 </script>
 
 <style scoped>
-/*
- * Hollow glyphs: the fill goes, the stroke stays on the text colour, which is
- * the animated `color` and so rides the global theme transition.
- */
-.index-numeral {
-  font-size: clamp(3.5rem, 9vw, 8rem);
-  -webkit-text-stroke: 1px currentColor;
-  -webkit-text-fill-color: transparent;
-  opacity: 0.22;
-  will-change: transform;
-}
-
 .index-rule {
   will-change: transform;
 }
