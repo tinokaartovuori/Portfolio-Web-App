@@ -18,4 +18,10 @@ export interface FrameContext {
    * boxes: no lag, no bend, no float, no hover physics.
    */
   reduced: boolean
+  /**
+   * The colour theme, 0 for light and 1 for dark, damped between the two over
+   * the same ~600ms the CSS colour transition takes — so a mesh that blends
+   * two palettes by it fades along with the page rather than snapping.
+   */
+  theme: number
 }

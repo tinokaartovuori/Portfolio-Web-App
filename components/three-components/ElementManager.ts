@@ -1,5 +1,5 @@
 import { Mesh, Scene } from 'three'
-import { IntroRectangle } from './IntroRectangle'
+import { LightField } from './LightField'
 import type { FrameContext } from './FrameContext'
 
 /**
@@ -24,7 +24,15 @@ export interface TrackedObject3D extends DomPinnedMesh {
   updateAspectRatio(): void
 }
 
-type TrackedObject3DConstructor = new (element: HTMLElement) => TrackedObject3D
+/**
+ * `variant` is the tracker's optional `variant` prop, for a class that comes
+ * in several presets (the hero and the footer are both a LightField). A class
+ * without presets simply declares fewer parameters.
+ */
+type TrackedObject3DConstructor = new (
+  element: HTMLElement,
+  variant?: string,
+) => TrackedObject3D
 
 /**
  * Every value an `<ElementTracker object="…">` prop may name. Adding an element
@@ -33,7 +41,7 @@ type TrackedObject3DConstructor = new (element: HTMLElement) => TrackedObject3D
  * throws on the first frame.
  */
 const OBJECT_TYPES = {
-  IntroRectangle,
+  LightField,
 } satisfies Record<string, TrackedObject3DConstructor>
 
 export type TrackedObjectName = keyof typeof OBJECT_TYPES
@@ -54,9 +62,14 @@ export default class ElementManager {
   }
 
   loadElements(
-    elements: Record<string, { element: HTMLElement; object: string }>,
+    elements: Record<
+      string,
+      { element: HTMLElement; object: string; variant?: string }
+    >,
   ) {
-    for (const [key, { element, object }] of Object.entries(elements)) {
+    for (const [key, { element, object, variant }] of Object.entries(
+      elements,
+    )) {
       const ObjectType = OBJECT_TYPE_LOOKUP[object]
 
       if (!ObjectType) {
@@ -72,7 +85,7 @@ export default class ElementManager {
         continue
       }
 
-      const trackedObject = new ObjectType(element)
+      const trackedObject = new ObjectType(element, variant)
       this.elements.push(trackedObject)
       this.scene.add(trackedObject)
       trackedObject.update()

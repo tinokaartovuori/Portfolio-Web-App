@@ -11,7 +11,7 @@
     the name and the scroll prompt rather than under either. When it still
     cannot fit, the scroll prompt is suppressed instead (see the script).
   -->
-  <ElementTracker threeReference="hero" object="IntroRectangle">
+  <ElementTracker threeReference="hero" object="LightField" variant="hero">
     <section
       ref="hero"
       class="flex min-h-[100svh] w-full items-center px-[8vw] pb-[calc(var(--bar-safe)_+_2rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] sm:px-[10vw]"

@@ -4,6 +4,8 @@ import { ref } from 'vue'
 interface ThreeElementEntry {
   element: HTMLElement
   object: string
+  /** Preset name for classes that have them; see ElementManager. */
+  variant?: string
 }
 
 /**
@@ -39,9 +41,14 @@ export const useThreeObjectStateStore = defineStore(
       )
     }
 
-    function addThreeElement(id: string, element: HTMLElement, object: string) {
+    function addThreeElement(
+      id: string,
+      element: HTMLElement,
+      object: string,
+      variant?: string,
+    ) {
       warnOnDuplicate(id)
-      threeElementTracker.value[id] = { element, object }
+      threeElementTracker.value[id] = { element, object, variant }
     }
 
     function addThreeImage(id: string, element: HTMLImageElement) {

@@ -15,9 +15,10 @@ import { storeToRefs } from 'pinia'
 
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
 import { useWindowSize } from '@vueuse/core'
-import { onFrame } from '~/composables/useFrameLoop'
+import { onFrame, damp } from '~/composables/useFrameLoop'
 import { scrollFrame } from '~/composables/useSmoothScroll'
 import { pointerFrame, createPointerTracker } from '~/composables/usePointer'
+import { motion } from '~/motion.config'
 
 // Trailing debounce for window resizes, so a drag only rebuilds once it settles
 const resizeDebounce = 100
@@ -34,6 +35,11 @@ const { threeElementTracker, threeImageTracker } = storeToRefs(threeObjectState)
 
 const { width, height } = useWindowSize()
 const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
+
+// The resolved theme ('light' | 'dark'); this component is client-only, so
+// it is known by the time anything here runs
+const colorMode = useColorMode()
+const themeTarget = () => (colorMode.value === 'dark' ? 1 : 0)
 
 // Scenario: a scene, a camera and a renderer
 let scenario: Scenario | null = null
@@ -53,10 +59,14 @@ const frame: FrameContext = {
   scroll: scrollFrame,
   pointer: pointerFrame,
   reduced: false,
+  theme: 0,
 }
 
 onMounted(() => {
   if (!threeCanvas.value) return
+
+  // Start on the current theme rather than fading in from the wrong one
+  frame.theme = themeTarget()
 
   scenario = new Scenario(threeCanvas.value)
   if (POST_PROCESSING) scenario.enablePostProcessing()
@@ -80,6 +90,12 @@ onMounted(() => {
       frame.dt = dt
       frame.time = time
       frame.reduced = scrollFrame.reduced
+      // Blend toward the theme over the same ~600ms the CSS colours take;
+      // under reduced motion the CSS transition is 1ms, so snap to match
+      const theme = themeTarget()
+      frame.theme = frame.reduced
+        ? theme
+        : damp(frame.theme, theme, motion.theme.smoothing, dt)
       imageManager.updateImages(frame)
       elementManager.updateElementPositions(frame)
     }),

@@ -82,8 +82,12 @@ export const motion = {
     bounceMaxVelocity: 8000,
   },
 
-  /** The WebGL images: how they trail, bend, float and react to the cursor. */
-  image: {
+  /**
+   * How every scroll-driven effect reads the scroll (utils/scrollFeel.ts):
+   * the images, the light fields, the glow plates and the marquee all derive
+   * their "how fast" from these three numbers, so they agree on it.
+   */
+  scrollFeel: {
     /**
      * Smoothed scroll velocity drives the directional effects (trail, bend,
      * aberration). The decay rate is per second; 8 settles ~400ms after
@@ -98,7 +102,29 @@ export const motion = {
      * motion rather than pulsing with every notch.
      */
     energySmoothing: 5,
+  },
 
+  /**
+   * The WebGL layer blends its palettes between the light and dark theme by a
+   * damped 0..1 value; this decay rate (per second) puts it at 99% in ~0.6s,
+   * in step with the CSS colour transition.
+   */
+  theme: { smoothing: 8 },
+
+  /**
+   * The colours the decorative meshes draw with, as `[light, dark]` hex pairs
+   * blended by the theme. `accent` and `cool` are the two light hues; `base`
+   * is the frosted plate tint, the opposite of the page colour so it reads as
+   * a faint pane on either.
+   */
+  palette: {
+    accent: [0xbe185d, 0xec4899],
+    cool: [0x3730a3, 0x60a5fa],
+    base: [0x0c0d12, 0xdde0ed],
+  },
+
+  /** The WebGL images: how they trail, bend, float and react to the cursor. */
+  image: {
     /**
      * The mesh trails the DOM box it is pinned to by up to this many pixels,
      * through a spring just under critical, so it has mass and settles with
@@ -163,9 +189,54 @@ export const motion = {
     parallax: 0.1,
   },
 
-  /** The hero backdrop rectangle trails a little less than the images. */
-  introRectangle: {
-    lag: { max: 14, stiffness: 120, damping: 20 },
+  /**
+   * Frosted-glass light fields (LightField): soft lights drifting behind a
+   * rounded plate pinned to a DOM box. The hero and the footer are presets of
+   * the same thing.
+   */
+  lightField: {
+    /** The cursor light chases the pointer through this: slow and liquid. */
+    cursorSpring: { stiffness: 60, damping: 14 },
+    /** How quickly the cursor light brightens and dims as the pointer
+     * enters and leaves the plate. */
+    hoverSpring: { stiffness: 120, damping: 20 },
+    /** Extra intensity on the cursor light while the pointer is over the plate. */
+    cursorBoost: 0.5,
+    /** Vertical elongation of every light at full scroll energy, as a share. */
+    stretch: 0.6,
+    /** Extra intensity at full scroll energy, as a share. */
+    brighten: 0.35,
+    /** Dither amplitude in 8-bit steps; hides banding in the light tails. */
+    grain: 3,
+    presets: {
+      hero: {
+        /** Lights in the field, at most 6; the last one follows the cursor. */
+        lights: 5,
+        /** Gaussian sigma of one light, as a share of the plate's shorter side. */
+        radius: 0.2,
+        /** Orbit speed (rad/s, scaled per light) and amplitude (UV units). */
+        drift: { speed: 0.12, amplitude: 0.22 },
+        /** Peak alpha of one light, `[light, dark]` theme. */
+        intensity: [0.3, 0.38],
+        /** Alpha of the frosted plate itself, `[light, dark]` theme. */
+        baseAlpha: [0.03, 0.04],
+        /** The plate is drawn this many px inside the element's box. */
+        inset: 20,
+        cornerRadius: 24,
+        /** The plate trails its box a little less than the images do. */
+        lag: { max: 14, stiffness: 120, damping: 20 },
+      },
+      footer: {
+        lights: 3,
+        radius: 0.4,
+        drift: { speed: 0.09, amplitude: 0.18 },
+        intensity: [0.28, 0.5],
+        baseAlpha: [0.03, 0.04],
+        inset: 0,
+        cornerRadius: 28,
+        lag: { max: 10, stiffness: 120, damping: 20 },
+      },
+    },
   },
 
   /**

@@ -8,8 +8,9 @@ import {
   ShaderMaterial,
   DoubleSide,
 } from 'three'
-import { damp } from '~/composables/useFrameLoop'
 import { Spring } from '~/utils/spring'
+import { ScrollFeel } from '~/utils/scrollFeel'
+import { cursorUvIn } from '~/utils/cursorUv'
 import { motion } from '~/motion.config'
 import type { DomPinnedMesh } from './ElementManager'
 import type { FrameContext } from './FrameContext'
@@ -166,10 +167,8 @@ export default class WavyImage
   imageTexture: Texture
   shaderUniforms: WavyImageUniforms
 
-  /** Smoothed scroll velocity, px/s. */
-  private velocity = 0
-  /** Smoothed scroll magnitude, 0..1. */
-  private energy = 0
+  /** Smoothed scroll velocity, drive and energy. */
+  private feel = new ScrollFeel(motion.scrollFeel)
   /** Vertical trail behind the DOM box, px. */
   private lag = new Spring(config.lag)
   private hover = new Spring(config.hover.spring)
@@ -250,7 +249,7 @@ export default class WavyImage
   resize() {
     this.measure()
     this.lag.set(0)
-    this.energy = 0
+    this.feel.reset()
     this.drift.set(0, 0)
     this.position.set(this.positionOffset.x, this.positionOffset.y, 0)
     this.rotation.set(0, 0, 0)
@@ -280,10 +279,7 @@ export default class WavyImage
    * pixels off during a scroll.
    */
   private cursorUv(ctx: FrameContext): Vector2 | null {
-    const { pointer } = ctx
-    if (!pointer.active) return null
     const { x: width, y: height } = this.dimensions
-    if (width === 0 || height === 0) return null
 
     // Screen-space top-left of the mesh: WebGL y is up, so the y offsets flip
     const left =
@@ -294,10 +290,7 @@ export default class WavyImage
       height / 2 -
       (this.lag.value + this.drift.y)
 
-    const u = (pointer.x - left) / width
-    const v = 1 - (pointer.y - top) / height
-    if (u < 0 || u > 1 || v < 0 || v > 1) return null
-    return cursorScratch.set(u, v)
+    return cursorUvIn(ctx.pointer, left, top, width, height, cursorScratch)
   }
 
   update(ctx: FrameContext) {
@@ -306,19 +299,10 @@ export default class WavyImage
     const { x: width, y: height } = this.dimensions
     const uniforms = this.shaderUniforms
 
-    // Smooth the velocity per second rather than per frame, so the effect has
-    // the same strength at 60, 120 and 144Hz
-    this.velocity = damp(
-      this.velocity,
-      ctx.scroll.velocity,
-      config.velocitySmoothing,
-      dt,
-    )
-    // Soft saturation: proportional at normal speeds, capped on a hard flick
-    const drive = Math.tanh(this.velocity / config.velocityScale)
-    // How hard the page is moving, blended more slowly still so the bubble
-    // swells and relaxes as one motion instead of pulsing with every notch
-    this.energy = damp(this.energy, Math.abs(drive), config.energySmoothing, dt)
+    // Smoothed per second rather than per frame, so the effect has the same
+    // strength at 60, 120 and 144Hz; see ScrollFeel for the three stages
+    this.feel.update(ctx.scroll.velocity, dt)
+    const { drive, energy } = this.feel
 
     // The crop slides with the plane's place in the viewport, clamped to the
     // overscan so the texture edge never shows
@@ -350,9 +334,9 @@ export default class WavyImage
     // and drift outward, both scaled by where the plane sits on screen
     const { bubble } = config
     const screen = uniforms.uScreenCenter.value
-    const bubbleTiltX = -screen.y * bubble.tilt * this.energy
-    const bubbleTiltY = screen.x * bubble.tilt * this.energy
-    const spread = screen.x * bubble.spread * this.energy
+    const bubbleTiltX = -screen.y * bubble.tilt * energy
+    const bubbleTiltY = screen.x * bubble.tilt * energy
+    const spread = screen.x * bubble.spread * energy
 
     // Idle drift
     const { float } = config
@@ -401,7 +385,7 @@ export default class WavyImage
     )
 
     uniforms.uBend.value = (this.lag.value * config.bend) / height
-    uniforms.uEnergy.value = this.energy
+    uniforms.uEnergy.value = energy
     uniforms.uAberration.value = config.aberration.scroll * drive
     uniforms.uHover.value = hoverAmount
     uniforms.uMouse.value.set(this.cursorX.value, this.cursorY.value)

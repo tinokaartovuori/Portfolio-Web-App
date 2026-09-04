@@ -17,6 +17,11 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  /** Preset name, for object types that have several (see motion.config). */
+  variant: {
+    type: String,
+    default: undefined,
+  },
 })
 
 const reader = ref<HTMLElement | null>(null)
@@ -36,6 +41,7 @@ onMounted(() => {
     props.threeReference,
     firstChild,
     props.object,
+    props.variant,
   )
   registered = firstChild
 })
