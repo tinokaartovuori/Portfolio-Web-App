@@ -50,7 +50,9 @@ Register with `onFrame(stage, cb)` (returns an unregister) or `useFrame(stage, c
 
 `dt` is in seconds and clamped to 1/30. Two easing helpers exist and you should not write a third: `damp(current, target, lambda, dt)` from the same module for anything that only needs to approach a target, and `Spring` from `utils/spring.ts` (Framer-style `stiffness` / `damping` / `mass`, substepped semi-implicit Euler) for anything that should have mass and overshoot. `x += (target - x) * k` decays per _frame_ and so behaves differently at 60, 120 and 144 Hz.
 
-**Every number that decides how the site feels lives in `motion.config.ts`** — scroll spring and speed cap, keyboard step, rubber-band stiffness, image trail, bubble depth, hover lift, lens size. Tune there; the motion code reads it and nothing else should carry a magic constant.
+Two small helpers sit on top of those and are shared by everything scroll- or cursor-driven: `ScrollFeel` (`utils/scrollFeel.ts`) turns the raw scroll velocity into a smoothed `velocity`, a tanh-saturated signed `drive` and a more slowly smoothed `energy`, so the images, the light fields, the glow plates and the marquee agree on what "fast" is; `cursorUvIn` (`utils/cursorUv.ts`) is the allocation-free "where is the pointer over this box, in UV" test.
+
+**Every number that decides how the site feels lives in `motion.config.ts`** — scroll spring and speed cap, keyboard step, rubber-band stiffness, the shared scroll feel, the theme blend rate, the palette, image trail, bubble depth, hover lift, lens size, the light fields, glow plates, index rows, marquee, cursor and magnetic pull. Tune there; the motion code reads it and nothing else should carry a magic constant.
 
 ### 2. Scrolling is native, driven by a spring, with a rubber band at the edges
 
@@ -77,7 +79,7 @@ The OS scrollbar is hidden in CSS; `components/ScrollTrack.vue` draws the visibl
 
 Two wrapper components register into `threeObjectState` on mount:
 
-- `<ElementTracker threeReference="uniqueId" object="IntroRectangle">` — registers its **first slot child** and a string naming which Three class to instantiate.
+- `<ElementTracker threeReference="uniqueId" object="LightField" variant="hero">` — registers its **first slot child** and a string naming which Three class to instantiate. The optional `variant` is handed to that class's constructor as a second argument, for classes that come in presets (the hero and the footer are both a `LightField`; a `GlowPlate` is `accent` or `cool`). Attributes on the tracker fall through to its own `<div>`, which is what the parent lays out — put layout classes there, not on the child.
 - `<ThreeImage threeReference="uniqueId" imageUrl="…" alt="…" />` — renders an `opacity-0` `<img>` (it exists only to be measured and to supply the texture URL, but stays in the accessibility tree) and registers it.
 
 The registry is global and keyed by `threeReference`, so **`threeReference` has to be unique across both trackers combined** — `remove()` is keyed globally and looks in both maps. In development a duplicate logs a warning naming the id. Both wrappers deregister themselves on unmount, so a page does not need `threeObjectStateStore.reset()`; the calls the existing pages make are harmless.
@@ -88,11 +90,11 @@ The registry is global and keyed by `threeReference`, so **`threeReference` has 
 
 - `three-components/Scenario.ts` — scene + perspective camera + renderer. The camera math is the crux of the DOM↔WebGL mapping: with `perspective = 1000` and `fov = 2·atan(height/2/perspective)`, **one world unit equals one CSS pixel** at z=0, so meshes can be positioned directly from `getBoundingClientRect()`.
 - `three-components/ImageManager.ts` → builds a `WavyImage` per registered image.
-- `three-components/ElementManager.ts` → maps the `object` string to a class through the `OBJECT_TYPES` lookup table. **Adding an element type is one entry there** — the `satisfies` on that literal turns a class that has drifted from the lifecycle into a compile error on the entry rather than a method that throws on the first frame. An unrecognised name renders nothing and warns in development. It also exports `TrackedObject3D`, the interface every element class has to satisfy, and `TrackedObjectName`, the union of valid `object` prop values.
+- `three-components/ElementManager.ts` → maps the `object` string to a class through the `OBJECT_TYPES` lookup table (`LightField`, `GlowPlate`). **Adding an element type is one entry there** — the `satisfies` on that literal turns a class that has drifted from the lifecycle into a compile error on the entry rather than a method that throws on the first frame. An unrecognised name renders nothing and warns in development. It also exports `TrackedObject3D`, the interface every element class has to satisfy, and `TrackedObjectName`, the union of valid `object` prop values.
 
 Update flow, all via `watch`:
 
-- `onFrame('transform')` → fills one reused `FrameContext` (`three-components/FrameContext.ts`: `dt`, `time`, `scroll` = `scrollFrame`, `pointer` = `pointerFrame`, `reduced`) and calls `imageManager.updateImages(ctx)` + `elementManager.updateElementPositions(ctx)`
+- `onFrame('transform')` → fills one reused `FrameContext` (`three-components/FrameContext.ts`: `dt`, `time`, `scroll` = `scrollFrame`, `pointer` = `pointerFrame`, `reduced`, `theme`) and calls `imageManager.updateImages(ctx)` + `elementManager.updateElementPositions(ctx)`. `theme` is 0 for light and 1 for dark, damped toward the resolved `useColorMode().value` at `motion.theme.smoothing` so it crosses over in the same ~600 ms as the CSS colour transition (snapped under reduced motion, where the CSS transition is 1 ms); a class that blends two palettes by it fades with the page instead of switching.
 - `onFrame('render')` → `scenario.render()` — straight to the canvas, or through an `EffectComposer` when `scenario.enablePostProcessing(passes)` has been called (RenderPass → your passes → OutputPass, on a multisampled half-float target). Off by default (`POST_PROCESSING` in the canvas component) because it costs a full-screen target per frame; it is the hook for bloom, blur and glass. The renderer states `outputColorSpace = SRGBColorSpace` and `toneMapping = NoToneMapping` explicitly; when tone mapping goes on, OutputPass applies it to the photographs too.
 - `composables/usePointer.ts` → `pointerFrame`, the plain `{ x, y, hover, active }` cursor state the meshes read. `hover` is true only for a fine pointer that can hover, so a finger never triggers hover physics.
 - `watch([width, height])` (from `useWindowSize`, 100ms trailing debounce) → full update + camera/renderer resize
@@ -103,7 +105,7 @@ The canvas wrapper is `fixed inset-0 z-0`; page content sits above it at `z-10`.
 
 ### 6. Positioning convention for 3D objects
 
-Every object class (`WavyImage`, `IntroRectangle`) repeats the same pattern — copy it when adding new ones:
+Every object class (`WavyImage`, `LightField`, `GlowPlate`) repeats the same pattern — copy it when adding new ones:
 
 ```ts
 const { width, height, top, left } = element.getBoundingClientRect()
@@ -116,7 +118,13 @@ offset.set(
 
 An element class **is** the mesh — it extends `Mesh` rather than wrapping one in an `Object3D`, so there is no inner node to keep in sync and `this.geometry` / `this.material` are the typed pair three already maintains. It has to expose `update()` (full re-measure, effects at rest), `updatePosition(ctx)` (per frame), `updateAspectRatio()` and `dispose()`: that is the `TrackedObject3D` interface `ElementManager` types its array with, so a missing method is a compile error. `ImageManager` is the outlier: it stores `WavyImage[]` and calls `update(ctx)`, `resize()` and `dispose()`, which is the smaller `DomPinnedMesh` contract `WavyImage` implements.
 
-**The DOM box is a target, not a position.** The `<img>` a `WavyImage` follows is invisible, so the mesh is free to deviate from it by a few tens of pixels, and the physics live in that freedom: the mesh trails the box through a spring (`lag`), bends by a share of that trail, recedes in z while scrolling fast, drifts a few pixels at rest, and under a fine pointer lifts toward the camera, tilts toward the cursor and shows a gaussian "liquid lens" (a vertex bulge plus a UV magnification and radial chromatic aberration). Every one of those is a `Spring` or a `damp()` fed by the `FrameContext`, so all of it settles the same way at 60 and 144 Hz, and every amount is a number in `motion.config.ts`. `IntroRectangle` gets the same trail with a smaller amplitude. Under `ctx.reduced` every class snaps to its box and does nothing else.
+All of them are a `PlaneGeometry(1, 1)` scaled to the box in pixels, so UVs are 0–1 by construction; shapes such as the light field's rounded corners are a signed-distance mask in the fragment shader, fed the size in px through a uniform that has to be refreshed on every measure. A mesh placed **off the z=0 plane** (the glow plates sit at `-depth`) has to multiply its position and size by `(PERSPECTIVE + depth) / PERSPECTIVE` to keep the footprint the box describes — `Scenario.ts` exports the constant. The decorative materials are `transparent` with `depthWrite: false`, straight alpha over the clear-alpha-0 canvas; three draws the opaque images first and the transparent meshes after, and a plate deeper than the image can ever recede needs no `renderOrder`. Every fragment shader that writes a `Color` uniform ends with `#include <colorspace_fragment>`, for the same reason `WavyImage`'s does. The scene is rebuilt on every registration, so nothing in a class may depend on per-instance random state (the light orbits are phased by index) and the theme is read from `ctx.theme` each frame, never cached at construction.
+
+**The DOM box is a target, not a position.** The `<img>` a `WavyImage` follows is invisible, so the mesh is free to deviate from it by a few tens of pixels, and the physics live in that freedom: the mesh trails the box through a spring (`lag`), bends by a share of that trail, recedes in z while scrolling fast, drifts a few pixels at rest, and under a fine pointer lifts toward the camera, tilts toward the cursor and shows a gaussian "liquid lens" (a vertex bulge plus a UV magnification and radial chromatic aberration). Every one of those is a `Spring` or a `damp()` fed by the `FrameContext`, so all of it settles the same way at 60 and 144 Hz, and every amount is a number in `motion.config.ts`. Under `ctx.reduced` every class snaps to its box and does nothing else.
+
+**`LightField`** is the frosted-glass light behind the hero (and, with the `footer` preset, the footer): a rounded plate whose fragment shader lays 3–5 gaussian lights over a faint tint of the opposite page colour, "over" rather than additive so the same shader reads on both themes. The lights drift on slow deterministic orbits; the last one is pulled to the cursor while the pointer is over the plate and eases back to its orbit when it leaves; scroll energy stretches and brightens the field; the plate keeps the trail the old rectangle had; colour and alpha are dithered, because on onyx the banding lives in the low-alpha tails. Palette and per-preset numbers are `motion.palette` and `motion.lightField`.
+
+**`GlowPlate`** is one soft light behind each project image, in the same palette (`accent` and `cool` alternate down the list), on a plate 1.6× the image set back at `-depth`, trailing its box through a looser spring than the image so the two separate while scrolling and rejoin with a settle, and brightening under the pointer. Its edge is faded to nothing: a gaussian tail with any alpha left at the plate edge reads as a rectangle.
 
 **Where an image is on screen decides how it moves.** The vertex shader gets the plane's centre and size in viewport units (`uScreenCenter`, `uScreenSize`, viewport spanning [-1, 1]) and computes each vertex's own screen position. While scrolling, the page behaves as a bubble seen face-on: vertices near the viewport centre come toward the camera and those near the edges go away (`bubble.depth`), each mesh tilts away from the centre and drifts outward in proportion to its screen offset (`bubble.tilt`, `bubble.spread`), and the trail sags on the side of the plane nearer the centre — so a left-hand image and a right-hand one deform as mirror images, and an image changes shape as it travels up the screen. All of it is scaled by `energy`, the smoothed scroll magnitude (`energySmoothing`, slower than the velocity smoothing so the bubble swells and relaxes as one motion instead of pulsing with each wheel notch). At rest the mesh sits exactly on its box.
 
@@ -126,11 +134,11 @@ An element class **is** the mesh — it extends `Mesh` rather than wrapping one 
 
 Text and images come from `content/`, typed by `content.config.ts` (Nuxt Content v3):
 
-- `content/home.yml` → the `home` **data** collection (hero copy, section headings)
+- `content/home.yml` → the `home` **data** collection (hero copy, the marquee words, section headings, the about teaser's labels, the footer's `contact` block)
 - `content/projects/*.md` → the `projects` **page** collection (frontmatter is the card, body is the project page)
 - `content/about.md` → the `about` **page** collection
 
-Pages query with `queryCollection(...)` inside `useAsyncData`, and `<ContentRenderer>` renders markdown bodies.
+Pages query with `queryCollection(...)` inside `useAsyncData`, and `<ContentRenderer>` renders markdown bodies. The two queries more than one component makes (`home`: the home page and the footer; `about`: the about page and the home page's teaser) go through `composables/useContent.ts`, because `useAsyncData` shares one payload per key but warns when two callers hand it different handler functions for the same key.
 
 **The constraint that shapes all of this:** the WebGL layer does not read data, it reads laid-out DOM boxes. A content field is only visible to the scene once it has been rendered as a real element wrapped in `<ElementTracker>` or `<ThreeImage>`. Adding a field that never reaches the DOM adds nothing to the canvas.
 
@@ -149,10 +157,23 @@ The hero on the home page pads itself past `--bar-safe` on both edges, so its te
 
 ### 9. Theming and assets
 
-- Dark/light via `@nuxtjs/color-mode` with `classSuffix: ''`, matching Tailwind's `darkMode: 'class'`. `ThemeSwitch.vue` writes `useColorMode().preference` and reads the resolved `useColorMode().value` back for the switch position. Custom palette is just two colors: `onyx` (#0c0d12) / `platinum` (#dde0ed); the global 600ms color transition in `index.css` is what makes theme switching feel smooth.
+- Dark/light via `@nuxtjs/color-mode` with `classSuffix: ''`, matching Tailwind's `darkMode: 'class'`. `ThemeSwitch.vue` writes `useColorMode().preference` and reads the resolved `useColorMode().value` back for the switch position. Custom palette is just two colors: `onyx` (#0c0d12) / `platinum` (#dde0ed), plus `pink-500` as the accent; the global 600ms color transition in `index.css` is what makes theme switching feel smooth, and the WebGL layer follows it through `FrameContext.theme` (section 5) with its own `[light, dark]` pairs in `motion.palette`.
 - Google Fonts (Outfit) are **downloaded and inlined as base64** into `assets/fonts/` by `@nuxtjs/google-fonts` (`overwriting: false`). Treat that directory as generated — never hand-edit it, and don't grep it (the base64 blobs will flood results).
 - SVGs import as components via `vite-svg-loader`: `import Icon from '../assets/icons/sun.svg?component'`.
 - `@` and `~` both alias the project root.
+
+### 10. The decorative layer
+
+Everything below is decoration on top of the pipeline above; each piece reads `pointerFrame` / `scrollFrame` in the `render` stage and honours reduced motion and coarse pointers on its own. DOM components read `matchMedia` for both **after mount**, so the server and the hydrating client always render the "off" state.
+
+- **Grain** (`GrainOverlay.vue`, in the layout) — sparse grains over the whole viewport, canvas and text alike. A colour matrix turns SVG noise into a flat colour whose alpha is zero for most values, so it speckles without lifting the page colour; black grains on the light page, white on the dark. A stepped `transform` animation (not `background-position`) keeps it on the compositor; still under reduced motion. It is above the bars (`z-[60]`) and below the cursor. A post-processing pass was rejected: it would cost a full-screen target every frame and grain only the canvas.
+- **Cursor** (`Cursor.vue`, in the layout) — a dot on the pointer and a ring that trails it through a spring, each its own `fixed` element in `mix-blend-mode: difference` (a shared wrapper with opacity or a transform would isolate them from the page and the difference would have nothing to blend with). One delegated `pointerover` listener decides the state from `closest('[data-cursor], a, button, …')`: the ring grows over links and larger still over `data-cursor="view"` (the project images), where it also carries a label. Fine pointers only; the native cursor is hidden by a class on `<html>` only while ours is on screen, with `!important` because controls set their own; reset on route change, since no `pointerover` fires after a click that navigates.
+- **Magnetic** (`composables/useMagnetic.ts`, `Magnetic.vue`) — an element pulled toward a nearby pointer through a slightly under-damped spring and let go on leave. The pull is computed from the rest position (the rect minus the current translation), or the element would chase its own displacement. On the top bar controls, the hero CTA, the about teaser link and the footer email.
+- **Index rows** (`ProjectIndex.vue`) — the outlined numeral (`-webkit-text-fill-color: transparent` with the stroke on `currentColor`, so it rides the theme transition) with a little parallax, and a rule that draws itself as the row enters the viewport. Measured from the **row's** rect, never the rule's: a rect includes the element's own transform.
+- **Marquee** (`Marquee.vue`) — a band of words between the hero and the work, holding the words twice so it loops; it runs on its own, the smoothed scroll velocity is added to it (down speeds it up, up slows or reverses it) and `drive` leans it over. The list is read once by assistive technology; the moving track is `aria-hidden`.
+- **Footer** (`SiteFooter.vue`, in the layout **inside** `ScrollContainer`) — on every page. It contains nothing fixed, so it rides the rubber band and its `LightField` follows; its back-to-top link is a same-page anchor and glides through the scroll spring like `#work` does.
+
+The three `fixed` pieces (grain, cursor, and the bars) are siblings of `<main>` in `layouts/default.vue`; nothing fixed may go inside `ScrollContainer` (section 2).
 
 ## Known rough edges
 
