@@ -309,21 +309,21 @@ export const motion = {
     /** The plate starts this far outside the viewport, so its own edge never shows. */
     overhang: 60,
     /** How far past the image's inner edge the plate reaches, px. */
-    bleed: 90,
+    bleed: 220,
     /** Plate height as a multiple of the image's. */
-    grow: 1.5,
+    grow: 2.2,
     /** Horizontal falloff from the page edge: gaussian sigma as a share of the plate width. */
-    reach: 0.55,
+    reach: 0.72,
     /** Vertical falloff: gaussian sigma as a share of the plate's half height. */
-    spreadY: 0.55,
+    spreadY: 0.7,
     /**
      * The irregularity: value noise over the plate (cells across its width
      * and height), drifting slowly, scaling the wash between 1-contrast and
      * 1+contrast.
      */
-    noise: { scale: [2.5, 1.6], speed: 0.05, contrast: 0.55 },
+    noise: { scale: [2.2, 1.4], speed: 0.05, contrast: 0.4 },
     /** Peak alpha at the page edge, `[light, dark]` theme. */
-    intensity: [0.38, 0.34],
+    intensity: [0.34, 0.3],
     /** Extra intensity, as a share, with the pointer over the image. */
     hoverBoost: 0.4,
     /** Extra intensity, as a share, at full scroll energy. */
