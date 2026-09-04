@@ -26,19 +26,21 @@
           :text="home?.hero.accent ?? ''"
           class="mt-6 block text-lg font-light text-onyx/60 dark:text-platinum/60 sm:text-xl md:mt-8 md:text-2xl"
         />
-        <a
-          :href="home?.hero.cta.to"
-          class="group mt-12 inline-flex items-baseline gap-3 text-base text-onyx dark:text-platinum sm:text-lg md:mt-16 md:text-xl"
-        >
-          <span
-            aria-hidden="true"
-            class="inline-block transition-transform duration-300 group-hover:translate-x-1"
-            >→</span
+        <Magnetic class="mt-12 md:mt-16">
+          <a
+            :href="home?.hero.cta.to"
+            class="group inline-flex items-baseline gap-3 text-base text-onyx dark:text-platinum sm:text-lg md:text-xl"
           >
-          <span class="border-b border-current/30 pb-1">{{
-            home?.hero.cta.label
-          }}</span>
-        </a>
+            <span
+              aria-hidden="true"
+              class="inline-block transition-transform duration-300 group-hover:translate-x-1"
+              >→</span
+            >
+            <span class="border-b border-current/30 pb-1">{{
+              home?.hero.cta.label
+            }}</span>
+          </a>
+        </Magnetic>
       </div>
     </section>
   </ElementTracker>

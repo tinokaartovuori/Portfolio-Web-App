@@ -239,6 +239,32 @@ export const motion = {
     },
   },
 
+  /** The custom cursor (Cursor.vue): a dot on the pointer, a ring behind it. */
+  cursor: {
+    /** The ring chases the pointer through this: quick, a hint of lag. */
+    ring: { stiffness: 420, damping: 32 },
+    /** How the ring grows and shrinks between states. */
+    scale: { stiffness: 260, damping: 22 },
+    size: {
+      /** Dot and ring diameters, px. */
+      dot: 6,
+      ring: 36,
+      /** Ring scale over a link, and over an element marked data-cursor="view". */
+      link: 1.6,
+      view: 2.4,
+    },
+  },
+
+  /** Magnetic elements (useMagnetic): pulled toward a nearby pointer. */
+  magnetic: {
+    /** How far outside the element's box the pull starts, px. */
+    radius: 48,
+    /** Share of the pointer's offset from the centre the element moves by. */
+    strength: 0.35,
+    /** Under critical, so a release lets go with one small wobble. */
+    spring: { stiffness: 150, damping: 15 },
+  },
+
   /**
    * Under `prefers-reduced-motion: reduce` every spring, bend and float is
    * disabled and meshes sit exactly on their DOM boxes; scrolling is native.

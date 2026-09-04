@@ -185,6 +185,16 @@ html * {
   outline-offset: 4px;
 }
 
+/*
+ * Cursor.vue stamps this on <html> while its own cursor is on screen. Every
+ * descendant, because controls set their own (`cursor-pointer` on the theme
+ * switch) and would otherwise show two.
+ */
+.cursor-custom,
+.cursor-custom * {
+  cursor: none !important;
+}
+
 #__nuxt {
   display: block;
 }

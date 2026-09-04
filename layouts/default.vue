@@ -30,5 +30,12 @@
     <!-- BottomBar will be replaced with different component later and moved to child elements -->
     <BottomBar />
     <ScrollTrack />
+
+    <!--
+      Both are fixed, so they live here rather than inside ScrollContainer,
+      which is transformed for the rubber band.
+    -->
+    <GrainOverlay />
+    <Cursor />
   </div>
 </template>
