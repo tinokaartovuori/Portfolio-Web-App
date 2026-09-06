@@ -130,7 +130,12 @@ onMounted(async () => {
     scenario = null
     return
   }
-  if (POST_PROCESSING) {
+  // Not on a touch device: the composer's multisampled half-float target
+  // and the halation's own render and blur are a full-screen cost per
+  // frame that a phone's GPU pays in dropped frames, for an effect that is
+  // slight at that size. Drawing goes straight to the canvas there.
+  const coarse = window.matchMedia('(pointer: coarse)').matches
+  if (POST_PROCESSING && !coarse) {
     halation = new HalationPass(scenario.scene, scenario.camera)
     // The halation pass encodes for the screen itself (see its header), so
     // it is the last pass and there is no OutputPass

@@ -1,5 +1,11 @@
 <template>
-  <div ref="content" class="relative z-10 w-full">
+  <!--
+    overflow-x-clip: anything reaching past the right edge is clipped here
+    rather than widening a phone's layout viewport (see the architecture
+    notes, "nothing may widen the page"). clip, not hidden: it makes no scroll
+    container, so the vertical overflow stays the document's own.
+  -->
+  <div ref="content" class="relative z-10 w-full overflow-x-clip">
     <slot />
   </div>
 </template>

@@ -1,22 +1,29 @@
 <template>
   <span
-    class="whitespace-nowrap delay-[0ms] duration-[0ms]"
+    class="delay-[0ms] duration-[0ms]"
     @mouseenter="mouseIn = true"
     @mouseleave="mouseIn = false"
   >
     <!--
       Split into one element per letter for the wave, so the string is exposed
       once for assistive tech instead of being announced character by character.
+      The letters of a word are held together in a nowrap word, and the words
+      are separated by ordinary spaces, so the line wraps between words like
+      any text: a nowrap line was what widened the page on a 360px phone.
     -->
     <span class="sr-only">{{ props.text }}</span>
-    <span
-      v-for="(letter, index) in props.text"
-      ref="letterElements"
-      :key="index"
-      class="relative inline-block"
-      aria-hidden="true"
-      >{{ letter === ' ' ? NON_BREAKING_SPACE : letter }}</span
-    >
+    <template v-for="(word, wordIndex) in words" :key="wordIndex">
+      {{ wordIndex > 0 ? ' ' : '' }}
+      <span class="inline-block whitespace-nowrap" aria-hidden="true">
+        <span
+          v-for="letter in word"
+          :key="letter.index"
+          :ref="(el) => setLetter(letter.index, el as HTMLElement | null)"
+          class="relative inline-block"
+          >{{ letter.char }}</span
+        >
+      </span>
+    </template>
   </span>
 </template>
 
@@ -37,8 +44,17 @@ const props = defineProps({
   },
 })
 
-// A literal ' ' would collapse against the neighbouring inline-block letters
-const NON_BREAKING_SPACE = ' '
+/** The words, each letter numbered through the whole string for the stagger */
+const words = computed(() => {
+  let index = 0
+  return props.text
+    .split(' ')
+    .filter((word) => word.length > 0)
+    .map((word) => Array.from(word, (char) => ({ char, index: index++ })))
+})
+const letterCount = computed(() =>
+  words.value.reduce((count, word) => count + word.length, 0),
+)
 
 /*
  * The wave: each letter dims to `LOW` and back over `PULSE` seconds, starting
@@ -55,18 +71,21 @@ const mouseIn = ref(false)
 const reducedMotion = usePreferredReducedMotion()
 const prefersReducedMotion = computed(() => reducedMotion.value === 'reduce')
 
-const letterElements = ref<HTMLElement[]>([])
+/** The letter elements by index; nested v-for refs keep no order of their own */
+const letters: HTMLElement[] = []
+const setLetter = (index: number, el: HTMLElement | null) => {
+  if (el) letters[index] = el
+}
 
 /** Seconds into the current pass, or -1 while still. */
 let local = -1
 const last: number[] = []
 
-const passLength = () => (props.text.length - 1) * STAGGER + PULSE
+const passLength = () => (letterCount.value - 1) * STAGGER + PULSE
 
 const ease = (t: number) => t * t * (3 - 2 * t)
 
 function writeOpacities(time: number) {
-  const letters = letterElements.value
   for (let i = 0; i < letters.length; i++) {
     const x = time - i * STAGGER
     let dim = 0
