@@ -2,8 +2,9 @@
 # measures and pins its meshes to.
 title: Portfolio
 description: >-
-  Tino Kaartovuori is an engineer in Finland who designs and builds web apps,
-  software and hardware, and works with AI as a daily tool.
+  Tino Kaartovuori is a software engineer in Salo, Finland, who designs and
+  builds web apps, AI automation, software and hardware for clients in Turku,
+  Helsinki and across southern Finland.
 
 hero:
   lead: An engineer who builds software, and everything around it.
@@ -47,5 +48,5 @@ contact:
     - label: GitHub
       to: https://github.com/tinokaartovuori
     - label: LinkedIn
-      to: https://www.linkedin.com/
+      to: https://www.linkedin.com/in/tinokaartovuori/
   backToTop: Back to top

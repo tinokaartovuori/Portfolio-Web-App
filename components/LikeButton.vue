@@ -2,11 +2,13 @@
   <!--
     A heart and its count, set in the same type as the links beside it. The
     count is empty until it has been fetched, on the server and through
-    hydration alike, so nothing is frozen into the page; its box is three
-    digits wide from the start, so the number arriving moves nothing else in
-    the bar. A press pops the heart through a spring and leaves a ring behind;
-    the number rolls up to the new one. All of it in the frame loop's render
-    stage, off under reduced motion, where the fill and the number just change.
+    hydration alike, so nothing is frozen into the page, and its box is the
+    number's own width, so the gap to the switch is the bar's gap whatever
+    the number is; the number itself is at most four characters ("1.2k",
+    "123k", `formatCount`). A press pops the heart through a spring and
+    leaves a ring behind; the number rolls up to the new one. All of it in
+    the frame loop's render stage, off under reduced motion, where the fill
+    and the number just change.
 
     Over the hero the heart stays in the text colour, hollow or filled; it
     takes the accent only once the bar has left the hero and sits over the
@@ -45,12 +47,17 @@
       </svg>
     </span>
     <span
-      class="relative block h-[1.25em] min-w-[3ch] overflow-hidden text-left leading-[1.25em] tabular-nums"
+      class="relative block h-[1.25em] overflow-hidden leading-[1.25em] tabular-nums"
       aria-live="polite"
     >
       <Transition name="roll">
-        <span v-if="count !== null" :key="count" class="block">
-          {{ count }}
+        <span
+          v-if="count !== null"
+          :key="count"
+          class="block whitespace-nowrap"
+          :title="count.toLocaleString('en')"
+        >
+          {{ formatCount(count) }}
         </span>
       </Transition>
     </span>
@@ -63,6 +70,7 @@ import { useLikes } from '~/composables/useLikes'
 import { useFrame, damp } from '~/composables/useFrameLoop'
 import { BAR_PAST_HERO } from '~/composables/useBar'
 import { Spring } from '~/utils/spring'
+import { formatCount } from '~/utils/formatCount'
 import { motion } from '~/motion.config'
 
 const { count, liked, like } = useLikes()

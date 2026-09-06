@@ -2,9 +2,32 @@ import { queryCollection } from '@nuxt/content/nitro'
 
 /**
  * llms.txt: a plain-text brief of the site for answer engines — who this is,
- * what the work is, and where each piece lives, absolute. Prerendered, so it
- * is a static file and reads the content at build time.
+ * where, what is offered and where, what the work is, and where each piece
+ * lives, absolute. Prerendered, so it is a static file and reads the content
+ * at build time.
  */
+
+/** A minimark node: a string, or `[tag, props, ...children]`. */
+type Node = string | [string, Record<string, unknown>, ...Node[]]
+
+/** The text of a node, its children joined. */
+function text(node: Node): string {
+  if (typeof node === 'string') return node
+  return node
+    .slice(2)
+    .map((child) => text(child as Node))
+    .join('')
+}
+
+/** The body's paragraphs as plain text, one line each, in order. */
+function paragraphs(body: unknown): string[] {
+  const tree = body as { value?: Node[] } | null
+  return (tree?.value ?? [])
+    .filter((node) => typeof node !== 'string' && node[0] === 'p')
+    .map((node) => text(node).replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
 export default defineEventHandler(async (event) => {
   const base = useRuntimeConfig(event).public.siteUrl.replace(/\/$/, '')
   const [home, about, projects] = await Promise.all([
@@ -18,8 +41,37 @@ export default defineEventHandler(async (event) => {
   lines.push('')
   if (home?.description) lines.push(`> ${home.description}`)
   lines.push('')
-  if (about?.standfirst) {
+
+  if (about) {
+    const { location } = about
+    lines.push('## About')
+    lines.push('')
+    lines.push(`Occupation: ${about.jobTitle}`)
+    lines.push(
+      `Location: ${location.city}, ${location.region}, ${location.country}`,
+    )
+    lines.push(`Works in: ${about.areaServed.join(', ')}, and remote`)
+    lines.push('Languages: Finnish, English')
+    lines.push('')
     lines.push(about.standfirst)
+    lines.push('')
+    for (const p of paragraphs(about.body)) {
+      lines.push(p)
+      lines.push('')
+    }
+    lines.push(about.availability.en)
+    lines.push('')
+    lines.push(about.availability.fi)
+    lines.push('')
+    lines.push(`## ${about.offersTitle}`)
+    lines.push('')
+    for (const offer of about.offers) lines.push(`- ${offer}`)
+    lines.push('')
+    lines.push('## Skills')
+    lines.push('')
+    lines.push(
+      [...new Set([...(home?.marquee ?? []), ...about.skills])].join(', '),
+    )
     lines.push('')
   }
 
@@ -38,7 +90,6 @@ export default defineEventHandler(async (event) => {
   lines.push('')
   if (home?.contact?.email) lines.push(`Email: ${home.contact.email}`)
   for (const link of home?.contact?.links ?? []) {
-    if (link.to === 'https://www.linkedin.com/') continue
     lines.push(`${link.label}: ${link.to}`)
   }
   lines.push('')

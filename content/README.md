@@ -9,7 +9,7 @@ page updates — no component edits, no rebuild step in development.
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `home.yml`      | The headline, the line under it, the button, the running band of words, the section heading above the work, the about eyebrow, the footer |
 | `projects/*.md` | One file per project. Frontmatter is the card; the body is the project page                                                               |
-| `about.md`      | The about section — frontmatter for the standfirst and the portrait, body for the prose                                                   |
+| `about.md`      | The about section — frontmatter for the standfirst, the portrait, where you are and what you offer; body for the prose                    |
 
 The footer (`contact` in `home.yml`) appears on every page: the heading, the
 email address, the links and the "back to top" label are all there.
@@ -131,8 +131,20 @@ is deliberate: the DOM stays the source of truth for layout, accessibility and
 search, and the canvas reads its geometry from it. With JavaScript or WebGL
 unavailable, the page is still a working portfolio with its photographs.
 
-The copy and the images are the real ones now (since September 2026). One
-thing is left: the LinkedIn address in `home.yml` is a placeholder. The film
+## Where you are and what you offer
+
+The frontmatter of `about.md` carries the facts that search engines and AI
+answer engines match on when someone asks for a developer in a given place:
+`jobTitle`, `location`, `areaServed` (the cities), an `availability`
+paragraph in English and in Finnish, `skills` and the `offers` list. The
+English paragraph and the offers are shown after the prose in the about
+section; the Finnish paragraph is not on the page at all (a search engine
+treats hidden text as spam) but goes, with all of these fields, into the
+page's structured data and into `/llms.txt`, the plain-text brief for AI
+crawlers, where a Finnish search finds it. Keep them in agreement with the
+prose; there is nothing to edit elsewhere.
+
+The copy and the images are the real ones now (since September 2026). The film
 project in `projects/3.philippines.md` has stills from the film as its
 gallery, shown small; there are few photographs from the trip, and the body
 says so.

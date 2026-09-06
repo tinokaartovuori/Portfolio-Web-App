@@ -264,8 +264,11 @@ const onNavigate = (event: MouseEvent, navigate: (e?: MouseEvent) => void) => {
     transition-delay: calc((3 - var(--i)) * 45ms);
   }
   .menu-folded .menu-item {
-    /* 40px = a row and its gap, so the whole stack sits under the button */
-    transform: translateY(2.5rem);
+    /* The whole stack sits under the button: 49px, so that the open button's
+     * cross (drawn ~17px tall, ending 39px down) is the same 26px visible
+     * gap from the switch under it as the switch is from the heart */
+    --menu-drop: 3.0625rem;
+    transform: translateY(var(--menu-drop));
     transition-delay: calc(var(--i) * 45ms);
   }
   .menu-folded:not(.menu-open) .menu-item {
@@ -273,7 +276,7 @@ const onNavigate = (event: MouseEvent, navigate: (e?: MouseEvent) => void) => {
     visibility: hidden;
     /* Drawn up into the button: each row by its own distance from it, the
      * lower rows further, and turned a little about the corner */
-    transform: translateY(calc(2.5rem - (var(--i) + 1) * 2.25rem))
+    transform: translateY(calc(var(--menu-drop) - (var(--i) + 1) * 2.25rem))
       translateX(0.5rem) rotate(calc(-4deg * (var(--i) + 1))) scale(0.8);
     transform-origin: top right;
     /* Visibility flips only once the last row has faded, so nothing is cut

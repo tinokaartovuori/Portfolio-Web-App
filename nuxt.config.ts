@@ -74,15 +74,16 @@ export default defineNuxtConfig({
       },
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      // The default title (the home page, and any page that sets none); a page
-      // with a title gets it appended with the name by the template in the
-      // layout, which — unlike this static head — may be a function
-      title: 'Tino Kaartovuori — Engineer: web, AI and hardware',
+      // No default title here: the layout's title template supplies it for a
+      // page that sets none (the home page), and a static one would be run
+      // through that template and come out with the name appended twice
       meta: [
         {
+          // The fallback for a page that sets none; the home page and the
+          // projects set their own (content/home.yml, the project summary)
           name: 'description',
           content:
-            'Tino Kaartovuori is an engineer in Finland who designs and builds web apps, software and hardware, and works with AI as a daily tool.',
+            'Tino Kaartovuori is a software engineer in Salo, Finland, who designs and builds web apps, AI automation, software and hardware for clients in Turku, Helsinki and across southern Finland.',
         },
         {
           name: 'theme-color',

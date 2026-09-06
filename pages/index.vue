@@ -237,6 +237,18 @@
         class="prose-body mt-12 max-w-[56ch] text-onyx dark:text-platinum md:mt-16 md:w-1/2"
       >
         <ContentRenderer :value="about" />
+        <!--
+          Where I am and what I take on, from the frontmatter; the Finnish
+          version is not on the page (hidden text is what a search engine
+          calls spam) but goes into the JSON-LD below and llms.txt, where a
+          Finnish search finds it. Then the offer as a list, from the same
+          data the structured data offers.
+        -->
+        <p>{{ about.availability.en }}</p>
+        <h3>{{ about.offersTitle }}</h3>
+        <ul>
+          <li v-for="offer in about.offers" :key="offer">{{ offer }}</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -376,14 +388,32 @@ useSeo({
 })
 
 // The site's identity: a WebSite and a Person, the Person referenced by @id
-// from every project page's JSON-LD
+// from every project page's JSON-LD. The Person carries the place (address,
+// occupation and where it is practised), the languages, the skills and the
+// offer as Services with the area they are served in — the facts an answer
+// engine needs to match "a developer in Turku" to this page.
 const contact = computed(() => home.value?.contact)
 const socials = computed(() =>
-  (contact.value?.links ?? [])
-    .map((l) => l.to)
-    // The LinkedIn placeholder is not a real profile yet
-    .filter((to) => to && to !== 'https://www.linkedin.com/'),
+  (contact.value?.links ?? []).map((l) => l.to).filter(Boolean),
 )
+const personId = `${absolute('/')}#person`
+const cities = (about.value?.areaServed ?? []).map((name) => ({
+  '@type': 'City',
+  name,
+}))
+const offers = (about.value?.offers ?? []).map((offer) => {
+  const [name = offer, ...rest] = offer.split(':')
+  return {
+    '@type': 'Offer',
+    itemOffered: {
+      '@type': 'Service',
+      name: name.trim(),
+      description: rest.length ? rest.join(':').trim() : undefined,
+      provider: { '@id': personId },
+      areaServed: cities,
+    },
+  }
+})
 useJsonLd([
   {
     '@type': 'WebSite',
@@ -391,18 +421,55 @@ useJsonLd([
     url: absolute('/'),
     name: 'Tino Kaartovuori',
     inLanguage: 'en',
-    publisher: { '@id': `${absolute('/')}#person` },
+    publisher: { '@id': personId },
   },
   {
     '@type': 'Person',
-    '@id': `${absolute('/')}#person`,
+    '@id': personId,
     name: contact.value?.name ?? 'Tino Kaartovuori',
     url: absolute('/'),
     email: contact.value?.email,
     image: absolute(about.value?.image ?? '/images/portrait.jpg'),
-    jobTitle: 'Engineer',
-    description: home.value?.description,
-    knowsAbout: home.value?.marquee,
+    jobTitle: about.value?.jobTitle ?? 'Software engineer',
+    // Language-tagged: the English site description, and the Finnish
+    // availability paragraph, which is on no page — this and llms.txt are
+    // where a Finnish search meets it
+    description: about.value
+      ? [
+          { '@language': 'en', '@value': home.value?.description },
+          { '@language': 'fi', '@value': about.value.availability.fi },
+        ]
+      : home.value?.description,
+    address: about.value
+      ? {
+          '@type': 'PostalAddress',
+          addressLocality: about.value.location.city,
+          addressRegion: about.value.location.region,
+          addressCountry: about.value.location.countryCode,
+        }
+      : undefined,
+    homeLocation: about.value
+      ? {
+          '@type': 'City',
+          name: `${about.value.location.city}, ${about.value.location.country}`,
+        }
+      : undefined,
+    workLocation: cities,
+    hasOccupation: about.value
+      ? {
+          '@type': 'Occupation',
+          name: about.value.jobTitle,
+          occupationLocation: cities,
+        }
+      : undefined,
+    knowsLanguage: ['fi', 'en'],
+    knowsAbout: [
+      ...new Set([
+        ...(home.value?.marquee ?? []),
+        ...(about.value?.skills ?? []),
+      ]),
+    ],
+    makesOffer: offers,
     sameAs: socials.value,
   },
 ])
@@ -436,7 +503,7 @@ useJsonLd([
   color: color-mix(in srgb, currentColor 50%, transparent);
 }
 
-.prose-body :deep(h2) {
+.prose-body :deep(h3) {
   margin-top: 1.6em;
   margin-bottom: 0.9em;
   font-size: 0.9375rem;
@@ -451,7 +518,9 @@ useJsonLd([
   border-bottom: 1px solid color-mix(in srgb, currentColor 35%, transparent);
 }
 
-.prose-body :deep(p:last-child) {
+/* No trailing margin under the column: the offers list is its last child,
+ * and the body's last paragraph keeps its gap to what follows it */
+.prose-body > :last-child {
   margin-bottom: 0;
 }
 </style>

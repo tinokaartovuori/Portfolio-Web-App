@@ -138,8 +138,12 @@ export default defineContentConfig({
     }),
 
     /**
-     * The about section of the home page: frontmatter for the standfirst
-     * and the portrait (a path under public/), markdown body for the prose.
+     * The about section of the home page: frontmatter for the standfirst,
+     * the portrait (a path under public/), the place and the offer; markdown
+     * body for the prose. The place, the availability and the offers are
+     * rendered after the prose and also go into the home page's JSON-LD
+     * Person and into llms.txt, so search engines and AI answer engines can
+     * match the work to the area.
      */
     about: defineCollection({
       type: 'page',
@@ -148,6 +152,27 @@ export default defineContentConfig({
         standfirst: z.string(),
         image: z.string(),
         imageAlt: z.string(),
+        /** The occupation, as a search engine names it. */
+        jobTitle: z.string(),
+        /** Where I am: the Person's postal address in the structured data. */
+        location: z.object({
+          city: z.string(),
+          region: z.string(),
+          country: z.string(),
+          /** ISO 3166-1 alpha-2, for `addressCountry`. */
+          countryCode: z.string(),
+        }),
+        /** The cities the work is offered in. */
+        areaServed: z.array(z.string()),
+        /** One paragraph on where I work and what I take on, in English and
+         * in Finnish: the Finnish one is what a Finnish search finds. */
+        availability: z.object({ en: z.string(), fi: z.string() }),
+        /** What the structured data lists as known, beyond the marquee. */
+        skills: z.array(z.string()),
+        /** The list under the prose; each item is one service, a colon
+         * separating a short name from the rest. */
+        offersTitle: z.string(),
+        offers: z.array(z.string()),
       }),
     }),
   },

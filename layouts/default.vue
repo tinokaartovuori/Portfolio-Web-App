@@ -51,6 +51,6 @@ useHead({
   titleTemplate: (title?: string) =>
     title
       ? `${title} · Tino Kaartovuori`
-      : 'Tino Kaartovuori — Engineer: web, AI and hardware',
+      : 'Tino Kaartovuori — Software engineer, Salo, Finland: web, AI, hardware',
 })
 </script>

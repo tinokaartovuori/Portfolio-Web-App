@@ -6,13 +6,15 @@
   Finnish says so before the click, and the anchor carries `hreflang` for the
   same reason.
 
-  Both marks are drawn here rather than imported, like the rating's star and
-  the arrow, and on the same rounded plate, so they read as a pair: the
-  YouTube mark is the plate with the play triangle cut out of it, in the
-  accent rather than the brand red; the game mark is the same plate as a
-  controller, a d-pad and two buttons cut out of it; the flag is the plate in the flag's own
-  colours with the cross laid over it, and a hairline round it so the white
-  still reads as a shape on the platinum page. Both are aria-hidden; the
+  Both marks are drawn here rather than imported, like the rating's stars
+  and the arrow, and at the same size in the accent, so they read as a
+  pair: the YouTube mark is a rounded plate with the play triangle cut out
+  of it, in the accent rather than the brand red; the game mark is a gamepad
+  silhouette with the d-pad and two buttons cut out of it (a plate with the
+  same cut-outs was tried first and did not read as a controller); the flag
+  is the plate in the flag's own colours with the cross laid over it, and a
+  hairline round it so the white still reads as a shape on the platinum
+  page. Both are aria-hidden; the
   label and a visually hidden "in Finnish" carry the meaning. The link never
   wraps inside itself, and a `short` label stands in below `sm`, where the
   card's row has to hold it beside "Read more".
@@ -43,15 +45,18 @@
       viewBox="0 0 24 24"
       class="relative top-[0.16em] size-[1.05em] shrink-0 text-accent"
       fill="currentColor"
-      fill-rule="evenodd"
     >
       <!--
-        The YouTube plate with a d-pad on the left and two buttons on the
-        right. The cross is one outline, not two crossed bars, or even-odd
-        would open a hole where the bars meet.
+        A gamepad silhouette: one outline — the top, a shoulder, a grip
+        rounding under each corner and a notch between them — drawn
+        clockwise, with a d-pad on the left and two buttons on the right
+        drawn anticlockwise, so under the nonzero rule they are the only
+        holes. One outline rather than a body plus two grip circles: where
+        those overlapped the winding was two, and a cut-out there stayed
+        solid.
       -->
       <path
-        d="M5 5.25h14A3.5 3.5 0 0 1 22.5 8.75v6.5a3.5 3.5 0 0 1-3.5 3.5H5a3.5 3.5 0 0 1-3.5-3.5v-6.5A3.5 3.5 0 0 1 5 5.25Zm1.8 3.4v2.5H4.3v2.2h2.5v2.5h2.2v-2.5h2.5v-2.2H9v-2.5H6.8Zm10.9 5.35a1.85 1.85 0 1 0 0 3.7 1.85 1.85 0 0 0 0-3.7Zm2.4-4.3a1.85 1.85 0 1 0 0 3.7 1.85 1.85 0 0 0 0-3.7Z"
+        d="M7 5.5H17A4.5 4.5 0 0 1 21.5 10V14.5A4.2 4.2 0 0 1 13.1 14.5A1.1 1.1 0 0 0 10.9 14.5A4.2 4.2 0 0 1 2.5 14.5V10A4.5 4.5 0 0 1 7 5.5ZM6.9 8.5V9.9H5.5V11.1H6.9V12.5H8.1V11.1H9.5V9.9H8.1V8.5ZM15.8 10.55a1.05 1.05 0 0 0 0 2.1 1.05 1.05 0 0 0 0-2.1ZM18.6 8.15a1.05 1.05 0 0 0 0 2.1 1.05 1.05 0 0 0 0-2.1Z"
       />
     </svg>
     <span class="border-b border-current/30 pb-1">
