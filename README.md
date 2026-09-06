@@ -31,12 +31,12 @@ Then you can use the commands listed above to run the project in development mod
 
 ## Deployment
 
-The site runs as one Node process behind Caddy, on a DigitalOcean Droplet, with Docker Compose:
+The site runs as one Node process on a DigitalOcean Droplet it shares with another app, whose Caddy owns ports 80 and 443 and routes `tino.kaartovuori.fi` to this container (the hostnames and the certificate are configured there, not here). The Droplet has 1 GB of memory, which is not enough for a Nuxt build, so the build is done on the deploying machine:
 
-1. Copy `.env.example` to `.env` and fill in `DOMAIN` (the site's address, Caddy gets the certificate for it) and `NUXT_STATS_KEY` (a long random string).
-2. `docker compose up -d --build`
+1. Once, on the Droplet: `/opt/Portfolio-Web-App/.env` from `.env.example` (`NUXT_STATS_KEY` is a long random string).
+2. `npm run deploy` — builds here, ships `.output` over SSH, wraps it in its image there and starts it. `DEPLOY_HOST` overrides the target.
 
-The like count and the visit log are one SQLite file in the `data` volume, which survives rebuilds. The numbers are at `https://<domain>/api/stats?key=<NUXT_STATS_KEY>` (add `&days=90` for a longer window).
+The like count and the visit log are one SQLite file in the `data` volume, which survives releases. The numbers are at `https://tino.kaartovuori.fi/api/stats?key=<NUXT_STATS_KEY>` (add `&days=90` for a longer window); the dashboard is GoatCounter at `https://stats.kaartovuori.fi`, which runs beside the site (`docker/goatcounter`).
 
 ## Progress so far
 

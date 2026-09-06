@@ -64,6 +64,11 @@ export default defineNuxtConfig({
       /** The site's own origin, for canonical URLs, og:image and JSON-LD;
        * `NUXT_PUBLIC_SITE_URL`. No trailing slash. */
       siteUrl: 'https://tino.kaartovuori.fi',
+      /** The GoatCounter instance the visit plugin counts into (its origin,
+       * no trailing slash); `NUXT_PUBLIC_GOATCOUNTER`, empty to count only
+       * in the site's own log. Read by prerendered pages at build time, so
+       * it has to be set for `nuxt build`, not for the server. */
+      goatcounter: 'https://stats.kaartovuori.fi',
     },
   },
   components: true,

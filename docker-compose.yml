@@ -1,34 +1,47 @@
-# One Droplet: the app behind Caddy, which takes care of the certificate.
-# Needs a .env with DOMAIN and NUXT_STATS_KEY (see .env.example).
+# The site on the Droplet it shares with kirjanpito.kaartovuori.fi. That
+# stack's Caddy owns ports 80 and 443 and terminates TLS for every host on
+# the machine, so this stack has no proxy of its own: it joins that stack's
+# network, and the Caddyfile there (tmi-tino-kaartovuori-kirjanpito, in
+# docker/Caddyfile) routes tino.kaartovuori.fi to `portfolio` and
+# stats.kaartovuori.fi to `portfolio-stats` by container name.
+#
+# The site itself is built where there is memory for it, never on the
+# Droplet, whose 1 GB is not enough for a Nuxt build: `npm run deploy`
+# (scripts/deploy.sh) builds here, ships `.output` over and the image is
+# wrapped around it there (Dockerfile). Needs a .env (see .env.example).
 services:
   app:
     build: .
+    image: portfolio-web-app
+    container_name: portfolio
     restart: unless-stopped
     environment:
       NUXT_STATS_KEY: ${NUXT_STATS_KEY:?set NUXT_STATS_KEY in .env}
       NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:?set NUXT_PUBLIC_SITE_URL in .env}
     volumes:
       - data:/data
-  caddy:
-    image: caddy:2-alpine
+    networks:
+      - edge
+
+  # GoatCounter, the visitor statistics (section 11 of ARCHITECTURE.md). One
+  # binary and a SQLite file; its dashboard is stats.kaartovuori.fi.
+  stats:
+    build: ./docker/goatcounter
+    image: portfolio-stats
+    container_name: portfolio-stats
     restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-      # HTTP/3 is UDP; without this Compose maps 443 as TCP only and QUIC
-      # never reaches the container
-      - '443:443/udp'
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-      REDIRECT_DOMAINS: ${REDIRECT_DOMAINS:-}
+      TZ: Europe/Helsinki
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - app
+      - stats:/data
+    networks:
+      - edge
 
 volumes:
   data:
-  caddy_data:
-  caddy_config:
+  stats:
+
+networks:
+  edge:
+    external: true
+    name: tmi-tino-kaartovuori-kirjanpito_sisainen
