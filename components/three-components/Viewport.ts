@@ -29,4 +29,6 @@ export const viewport = {
   docTop: 0,
   /** The pixel ratio the renderer draws at (capped, see Scenario). */
   ratio: 1,
+  /** A coarse primary pointer (a phone): the grain is set finer there. */
+  coarse: false,
 }

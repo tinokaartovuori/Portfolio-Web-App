@@ -95,8 +95,10 @@
       portrait and a landscape image keep their own aspect (the img is w-full
       h-auto), and the meshes measure whatever the grid lays out. With
       `galleryColumns: 3` — stills from a film, meant to be seen small — it
-      is three columns from md and two on a phone, closer set, and `wide`
-      spans two of them at every size, so five stills fill both rows.
+      is three columns from md, two from sm, closer set, and `wide` spans
+      two of them, so five stills fill both rows; on a phone one column, a
+      still at half the width being too small to see, and `wide` is just
+      one more still there.
     -->
     <section v-if="project.gallery?.length" class="mt-20 md:mt-28">
       <h2
@@ -109,14 +111,14 @@
         class="grid"
         :class="
           small
-            ? 'grid-cols-2 gap-4 md:grid-cols-3 md:gap-6'
+            ? 'grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-6'
             : 'grid-cols-1 gap-8 md:grid-cols-2 md:gap-10'
         "
       >
         <li
           v-for="(item, i) in project.gallery"
           :key="item.image"
-          :class="item.wide ? (small ? 'col-span-2' : 'md:col-span-2') : ''"
+          :class="item.wide ? (small ? 'sm:col-span-2' : 'md:col-span-2') : ''"
         >
           <ThreeImage
             :threeReference="`project-gallery-${project.stem}-${i}`"
@@ -203,7 +205,7 @@ const next = computed(() => {
   return list.length > 1 && i >= 0 ? list[(i + 1) % list.length] : null
 })
 
-/** A gallery of stills is set small: three columns, two on a phone. */
+/** Stills are set small: three columns, two from sm, one on a phone. */
 const small = computed(() => project.value?.galleryColumns === 3)
 
 /** The site's address as its label: the host, without the scheme or a www. */

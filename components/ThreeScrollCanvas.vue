@@ -193,6 +193,7 @@ onMounted(async () => {
   // frame that a phone's GPU pays in dropped frames, for an effect that is
   // slight at that size. Drawing goes straight to the canvas there.
   const coarse = window.matchMedia('(pointer: coarse)').matches
+  viewport.coarse = coarse
   if (POST_PROCESSING && !coarse) {
     halation = new HalationPass(scenario.scene, scenario.camera)
     // The halation pass encodes for the screen itself (see its header), so

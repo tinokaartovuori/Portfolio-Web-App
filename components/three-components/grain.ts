@@ -1,17 +1,20 @@
+import { motion } from '~/motion.config'
+import { viewport } from './Viewport'
+
 /**
  * The site's grain, for every fragment shader that draws it (PageGrain, the
- * photographs, the light fields' plates): one hash of a document position,
- * so two surfaces that meet on the page — a plate and the page around it —
- * show one continuous grain across the seam, and only the colour changes.
+ * photographs, the light fields' plates): one hash of a position on the
+ * page, so two surfaces that meet — a plate and the page around it — show
+ * one continuous grain across the seam, and only the colour changes.
  *
- * `grainAt` takes the fragment's position in the document in device px
- * (the page grain has it from `gl_FragCoord` and the canvas's anchor; a mesh
- * from its box's document position and its own UV, so the grain rides with
- * the mesh when it leaves its box), the cell size in whole device px and the
- * roll step. `grainOver` mixes the grey over a linear colour in sRGB, as a
- * layer over the page would be, whichever space the target is in.
- * Prepended to the shader source; the sRGB transfer functions are three's,
- * which it prepends to every fragment shader.
+ * `grainAt` takes the fragment's position in device px (the page grain has
+ * it from `gl_FragCoord` and the canvas's place on screen; a mesh from its
+ * box's position and its own UV, so the grain rides with the mesh when it
+ * leaves its box), the cell size in whole device px and the roll step.
+ * `grainOver` mixes the grey over a linear colour in sRGB, as a layer over
+ * the page would be, whichever space the target is in. Prepended to the
+ * shader source; the sRGB transfer functions are three's, which it prepends
+ * to every fragment shader.
  */
 export const grainShader = /* glsl */ `
   // Per-pixel hash without a sine, which shows its period on some GPUs
@@ -32,6 +35,11 @@ export const grainShader = /* glsl */ `
   }
 `
 
-/** One cell in whole device px, for the pixel ratio the scene draws at. */
-export const grainCell = (cssPx: number, ratio: number) =>
-  Math.max(1, Math.round(cssPx * ratio))
+/**
+ * One cell in whole device px, for the pixel ratio the scene draws at: the
+ * configured CSS size, finer on a coarse pointer (see `motion.grain`).
+ */
+export const grainCell = (ratio: number) => {
+  const { cell, cellCoarse } = motion.grain
+  return Math.max(1, Math.round((viewport.coarse ? cellCoarse : cell) * ratio))
+}

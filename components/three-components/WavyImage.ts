@@ -501,10 +501,7 @@ export default class WavyImage
     )
     this.shaderUniforms.uAspect.value = this.dimensions.x / this.dimensions.y
     this.shaderUniforms.uSize.value.copy(this.dimensions)
-    this.shaderUniforms.uGrainCell.value = grainCell(
-      motion.grain.cell,
-      viewport.ratio,
-    )
+    this.shaderUniforms.uGrainCell.value = grainCell(viewport.ratio)
     this.shaderUniforms.uGrainRatio.value = viewport.ratio
     this.updateCover()
   }

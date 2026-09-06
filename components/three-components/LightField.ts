@@ -321,10 +321,7 @@ export class LightField
     const height = Math.max(1, this.sizes.y - inset * 2)
     this.scale.set(width, height, 1)
     this.shaderUniforms.uSize.value.set(width, height)
-    this.shaderUniforms.uGrainCell.value = grainCell(
-      motion.grain.cell,
-      viewport.ratio,
-    )
+    this.shaderUniforms.uGrainCell.value = grainCell(viewport.ratio)
     this.shaderUniforms.uGrainRatio.value = viewport.ratio
     // Never wider than the plate is tall, or the SDF folds over itself
     this.shaderUniforms.uRadius.value = Math.min(

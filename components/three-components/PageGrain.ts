@@ -140,7 +140,7 @@ export default class PageGrain {
     this.mesh.scale.set(viewport.width * scale, viewport.height * scale, 1)
     this.renderer.getDrawingBufferSize(this.size)
     this.uniforms.uResolution.value.copy(this.size)
-    this.uniforms.uCell.value = grainCell(grain.cell, viewport.ratio)
+    this.uniforms.uCell.value = grainCell(viewport.ratio)
   }
 
   dispose() {

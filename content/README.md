@@ -78,8 +78,8 @@ rating:
     - Google Play
 # Optional: more images after the body, in two columns from tablet width up.
 # `wide: true` makes one span both columns; a landscape image usually wants it.
-# `galleryColumns: 3` shows them small — three columns, two on a phone — for
-# stills from a film; there `wide` spans two of the three.
+# `galleryColumns: 3` shows them small — three columns, two on a narrow
+# screen, one on a phone — for stills from a film; there `wide` spans two.
 galleryTitle: Shot on it
 gallery:
   - image: /images/pinhole-01.jpg

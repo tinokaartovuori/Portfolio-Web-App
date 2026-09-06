@@ -143,13 +143,22 @@ export const motion = {
    * each light field's plate, pinned to the plate. All three hash the same
    * document position, so where they meet the pattern runs on across the
    * seam. A grain is grey mixed over the surface at `alpha` (by theme), one
-   * grain per `cell` CSS px (rounded to whole device px), in sRGB like a
-   * layer over the page would be. The page and the plates roll at
-   * `noise.rate`; the photographs re-roll theirs `rate` times a second:
-   * slow, so it lives rather than fizzes; a still grain reads as texture, a
-   * fast one as noise.
+   * grain per `cell` CSS px (rounded to whole device px of the renderer's
+   * capped pixel ratio), in sRGB like a layer over the page would be. On a
+   * phone (a coarse pointer) the cell is `cellCoarse` instead: the ratio is
+   * capped at 1.5 there and the canvas scaled up to a denser screen, so the
+   * desktop's cell came out as a four-physical-pixel block, too big for a
+   * screen held that close; half a CSS px rounds to the finest the buffer
+   * has. The page and the plates roll at `noise.rate`; the photographs
+   * re-roll theirs `rate` times a second: slow, so it lives rather than
+   * fizzes; a still grain reads as texture, a fast one as noise.
    */
-  grain: { rate: 2.5, cell: 1.4, alpha: [0.05, 0.06] as const },
+  grain: {
+    rate: 2.5,
+    cell: 1.4,
+    cellCoarse: 0.5,
+    alpha: [0.05, 0.06] as const,
+  },
 
   /**
    * The colours the decorative meshes draw with, as `[light, dark]` hex pairs

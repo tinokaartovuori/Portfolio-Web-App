@@ -28,7 +28,7 @@
     -->
     <div
       class="relative flex w-full items-center justify-end gap-5 sm:gap-8 md:gap-10 max-sm:portrait:flex-col max-sm:portrait:items-end max-sm:portrait:gap-3"
-      :class="{ 'menu-folded': folded, 'menu-open': folded && open }"
+      :class="{ 'menu-folded': pastHero, 'menu-open': folded && open }"
     >
       <button
         ref="menuButton"
@@ -154,7 +154,22 @@ const route = useRoute()
 // Where the controls stack (index.css keeps the same query for the height)
 const portrait = useMediaQuery('(max-width: 639px) and (orientation: portrait)')
 const pastHero = ref(false)
-const folded = computed(() => portrait.value && pastHero.value)
+/*
+ * Folded only once mounted: the server cannot know the media query, and a
+ * hydrating client that already said "folded" left its class and `inert`
+ * unpatched (attribute mismatches are check-only), so a project page on a
+ * portrait phone had an inert stack standing open over the text for the
+ * whole visit. The `menu-folded` class follows `pastHero` alone instead —
+ * its CSS is inside the portrait query, and on a page without a hero the
+ * server knows `pastHero` — so the server HTML already carries the folded
+ * look there and nothing folds on arrival; `inert`, the button's tabindex
+ * and the open state wait for the client.
+ */
+const mounted = ref(false)
+onMounted(() => {
+  mounted.value = true
+})
+const folded = computed(() => mounted.value && portrait.value && pastHero.value)
 const open = ref(false)
 const menuButton = ref<HTMLButtonElement | null>(null)
 
