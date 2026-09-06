@@ -18,6 +18,7 @@ import { cursorUvIn } from '~/utils/cursorUv'
 import { motion } from '~/motion.config'
 import { PERSPECTIVE } from './Scenario'
 import type { TrackedObject3D } from './ElementManager'
+import { arrivalFor, advance, type Arrival } from './Arrival'
 import type { FrameContext } from './FrameContext'
 
 const config = motion.wireShape
@@ -103,10 +104,14 @@ export class WireShape
   /** Accumulated turn, radians. */
   private angle = 0
   private colors: [Color, Color]
+  /** Fades in on arrival like the lights do; on the element, so a rebuild
+   * does not replay it. */
+  private arrival: Arrival
 
   constructor(element: HTMLElement, variant?: string) {
     super(new BufferGeometry(), new MeshBasicMaterial({ visible: false }))
     this.element = element
+    this.arrival = arrivalFor(element)
 
     this.lines = new LineSegments(
       SHAPES[resolveShape(variant)](),
@@ -165,6 +170,19 @@ export class WireShape
     const baseOpacity =
       config.opacity[0] + (config.opacity[1] - config.opacity[0]) * theme
 
+    // Drawn from nothing once the scene has rendered, on the lights' timing
+    const arrived =
+      this.arrival.t >= 1
+        ? 1
+        : ctx.rendered
+          ? advance(
+              this.arrival,
+              dt,
+              motion.reveal.lights.duration,
+              ctx.reduced,
+            )
+          : 0
+
     // The box carries the page trail, so the shape sits exactly on it
     this.position.set(this.offset.x, this.offset.y, 0)
 
@@ -172,7 +190,7 @@ export class WireShape
       const size = this.size()
       this.scale.set(size, size, size)
       this.orient(0.5, 0.8)
-      material.opacity = baseOpacity
+      material.opacity = baseOpacity * arrived
       return
     }
 
@@ -213,7 +231,7 @@ export class WireShape
       0.5 + this.angle * 0.6 + this.tiltX.value,
       this.angle + this.tiltY.value,
     )
-    material.opacity = baseOpacity + config.hoverOpacity * hover
+    material.opacity = (baseOpacity + config.hoverOpacity * hover) * arrived
   }
 
   dispose() {

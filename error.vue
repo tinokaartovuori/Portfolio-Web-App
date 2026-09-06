@@ -35,10 +35,11 @@ const message = computed(() =>
     : 'Something went wrong.',
 )
 
-useHead({
-  title: computed(() =>
-    props.error.statusCode === 404 ? 'Page not found' : 'Error',
-  ),
+useSeoMeta({
+  title: () => (props.error.statusCode === 404 ? 'Page not found' : 'Error'),
+  description: 'This page could not be found.',
+  // An error page is not something to index
+  robots: 'noindex',
 })
 
 function handleError() {

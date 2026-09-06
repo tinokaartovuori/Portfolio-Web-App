@@ -10,6 +10,7 @@ import { Spring } from '~/utils/spring'
 import { ScrollFeel } from '~/utils/scrollFeel'
 import { cursorUvIn } from '~/utils/cursorUv'
 import { motion } from '~/motion.config'
+import { arrivalFor, advance, type Arrival } from './Arrival'
 import type { TrackedObject3D } from './ElementManager'
 import type { FrameContext } from './FrameContext'
 
@@ -21,6 +22,12 @@ const DEFAULT_PRESET: keyof typeof config.presets = 'hero'
 const MAX_LIGHTS = 6
 
 type ThemePair = readonly [light: number, dark: number]
+
+/** Deterministic 0..1 per light index; a rebuild must not resize the lights. */
+const hash = (i: number) => {
+  const x = Math.sin(i * 127.1 + 311.7) * 43758.5453
+  return x - Math.floor(x)
+}
 
 /** A value that depends on the theme: `[light, dark]`, blended by `theme`. */
 const themed = (pair: ThemePair, theme: number) =>
@@ -37,19 +44,29 @@ type LightFieldUniforms = {
   /** Both already blended for the theme, in linear space. */
   uColorA: { value: Color }
   uColorB: { value: Color }
-  /** The frosted plate itself: a faint tint of the opposite page colour. */
-  uBase: { value: Color }
-  uBaseAlpha: { value: number }
+  /** The page colour: the plate is opaque, so nothing behind it shows. */
+  uPage: { value: Color }
+  /** What the plate is pushed toward from there, and by how much: past the
+   * page colour, so the lights have contrast to show against. */
+  uPlate: { value: Color }
+  uPlateMix: { value: number }
+  /** The ±1 level dither in the colour, in colour units: scaled in with the
+   * lights so the plate starts flat, the colour the CSS plate over it has. */
+  uDither: { value: number }
   /** Peak alpha of one light. */
   uIntensity: { value: number }
+  /** Share of a twice-as-wide gaussian under each light. */
+  uHalo: { value: number }
   /** Which light is (or was last) under the pointer, -1 for none. */
   uCursorIndex: { value: number }
   /** Intensity multiplier on that light. */
   uCursorBoost: { value: number }
   /** Vertical elongation from scroll energy, 1 at rest. */
   uStretch: { value: number }
-  /** Dither amplitude in 8-bit steps. */
+  /** Frost grain amplitude, and the site's grain re-roll rate. */
   uGrain: { value: number }
+  uGrainRate: { value: number }
+  uTime: { value: number }
 }
 
 const vertexShader = /* glsl */ `
@@ -70,13 +87,18 @@ const fragmentShader = /* glsl */ `
   uniform int uLightCount;
   uniform vec3 uColorA;
   uniform vec3 uColorB;
-  uniform vec3 uBase;
-  uniform float uBaseAlpha;
+  uniform vec3 uPage;
+  uniform vec3 uPlate;
+  uniform float uPlateMix;
+  uniform float uDither;
   uniform float uIntensity;
+  uniform float uHalo;
   uniform int uCursorIndex;
   uniform float uCursorBoost;
   uniform float uStretch;
   uniform float uGrain;
+  uniform float uGrainRate;
+  uniform float uTime;
   varying vec2 vUv;
 
   // Per-pixel hash without a sine, which shows its period on some GPUs
@@ -93,33 +115,38 @@ const fragmentShader = /* glsl */ `
     float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
     float mask = 1.0 - smoothstep(-1.0, 1.0, d);
 
-    // Start from the frosted plate and lay each light over it. "Over" rather
-    // than additive, so the same field reads on a light and a dark page: the
-    // lights tint the plate instead of pushing it toward white.
-    vec3 col = uBase;
-    float a = uBaseAlpha;
+    // Start from an opaque plate pushed a step past the page colour — darker
+    // on the dark page, lighter on the light one — and lay each light over
+    // that. "Over" rather than additive, so the same field reads on both:
+    // the lights tint the plate instead of pushing it toward white. Opaque,
+    // so nothing of the dust behind the page shows through the hero.
+    vec3 col = mix(uPage, uPlate, uPlateMix);
+    // How much of the pixel the lights cover, for the frost below
+    float lit = 0.0;
     for (int i = 0; i < MAX_LIGHTS; i++) {
       if (i >= uLightCount) break;
       vec2 dl = (vUv - uLights[i].xy) * uSize;
       dl.y /= uStretch;
       float sigma = uLights[i].z;
-      float g = exp(-dot(dl, dl) / (2.0 * sigma * sigma)) * uIntensity;
+      // A gaussian with a broad shoulder: the halo is the same shape twice
+      // as wide, normalised so the peak stays at the intensity
+      float q = dot(dl, dl) / (2.0 * sigma * sigma);
+      float g = (exp(-q) + uHalo * exp(-q * 0.25)) / (1.0 + uHalo) * uIntensity;
       if (i == uCursorIndex) g *= uCursorBoost;
       vec3 c = mix(uColorA, uColorB, uLights[i].w);
-      float aOut = g + a * (1.0 - g);
-      col = (c * g + col * a * (1.0 - g)) / max(aOut, 1e-4);
-      a = aOut;
+      col = mix(col, c, g);
+      lit += g * (1.0 - lit);
     }
 
-    // Frost: a still grain in the lit parts only, so the plate reads as
-    // frosted glass rather than a gradient. It is not animated — a moving
-    // grain over a still page reads as a pattern, not a surface. The same
-    // noise, faint, in the alpha is what hides banding in the light tails.
-    float n = hash12(gl_FragCoord.xy) - 0.5;
-    col += n * uGrain * smoothstep(0.0, 0.25, a);
-    a = clamp(a + n * 2.0 / 255.0, 0.0, 1.0);
+    // Frost: a grain in the lit parts only, so the plate reads as frosted
+    // glass rather than a gradient, re-rolled at the site's slow grain rate
+    // so it lives the way the film grain in the photographs does. The same
+    // noise, faint, in the colour is what hides banding in the light tails.
+    float n = hash12(gl_FragCoord.xy + floor(uTime * uGrainRate) * 17.0) - 0.5;
+    col += n * uGrain * smoothstep(0.0, 0.25, lit);
+    col += n * uDither;
 
-    gl_FragColor = vec4(col, a * mask);
+    gl_FragColor = vec4(col, mask);
 
     // Colour uniforms are linear under three's colour management, so the
     // result is encoded here — the same pairing WavyImage relies on
@@ -166,20 +193,35 @@ export class LightField
   /** The light following the pointer, -1 for none. */
   private follower = -1
 
+  /**
+   * The CSS plate the page paints in this box (`[data-plate]`, see
+   * utils/plate.ts): hidden once this mesh has been drawn under it in the
+   * same colour, so the visitor never sees the swap. Restored by the canvas
+   * when the scene goes away, not here: this mesh is rebuilt often.
+   */
+  private plateElement: HTMLElement | null
+  /** The arrival clock the lights fade in on; on the element, so a rebuild
+   * does not replay it. */
+  private arrival: Arrival
+
   private accent: [Color, Color]
   private cool: [Color, Color]
   private base: [Color, Color]
+  private plate: [Color, Color]
 
   constructor(element: HTMLElement, variant?: string) {
     super(new PlaneGeometry(1, 1), new ShaderMaterial())
     this.element = element
     this.preset = resolvePreset(variant)
+    this.plateElement = element.querySelector<HTMLElement>('[data-plate]')
+    this.arrival = arrivalFor(element)
     this.lag = new Spring(this.preset.lag)
 
     const { palette } = motion
     this.accent = [new Color(palette.accent[0]), new Color(palette.accent[1])]
     this.cool = [new Color(palette.cool[0]), new Color(palette.cool[1])]
     this.base = [new Color(palette.base[0]), new Color(palette.base[1])]
+    this.plate = [new Color(palette.plate[0]), new Color(palette.plate[1])]
 
     this.shaderUniforms = this.buildMaterial()
 
@@ -209,13 +251,18 @@ export class LightField
       uLightCount: { value: count },
       uColorA: { value: new Color() },
       uColorB: { value: new Color() },
-      uBase: { value: new Color() },
-      uBaseAlpha: { value: 0 },
+      uPage: { value: new Color() },
+      uPlate: { value: new Color() },
+      uPlateMix: { value: 0 },
+      uDither: { value: 0 },
       uIntensity: { value: 0 },
+      uHalo: { value: 0 },
       uCursorIndex: { value: -1 },
       uCursorBoost: { value: 1 },
       uStretch: { value: 1 },
       uGrain: { value: config.grain },
+      uGrainRate: { value: motion.grain.rate },
+      uTime: { value: 0 },
     }
 
     const material = new ShaderMaterial({
@@ -273,8 +320,11 @@ export class LightField
     const u = this.shaderUniforms
     u.uColorA.value.lerpColors(this.accent[0], this.accent[1], theme)
     u.uColorB.value.lerpColors(this.cool[0], this.cool[1], theme)
-    u.uBase.value.lerpColors(this.base[0], this.base[1], theme)
-    u.uBaseAlpha.value = themed(this.preset.baseAlpha, theme)
+    // The page colour is the text colour of the other theme
+    u.uPage.value.lerpColors(this.base[1], this.base[0], theme)
+    u.uPlate.value.lerpColors(this.plate[0], this.plate[1], theme)
+    u.uPlateMix.value = themed(this.preset.plate, theme)
+    u.uHalo.value = themed(config.halo, theme)
   }
 
   /**
@@ -321,12 +371,48 @@ export class LightField
     this.measure()
     this.applySize()
     this.applyTheme(ctx.theme)
+    // The frost grain is re-rolled at the site's rate; still under reduced motion
+    this.shaderUniforms.uTime.value = ctx.reduced ? 0 : ctx.time
 
     const { dt } = ctx
     const { preset } = this
     const u = this.shaderUniforms
     const count = u.uLightCount.value
-    const sigma = preset.radius * Math.min(u.uSize.value.x, u.uSize.value.y)
+
+    /*
+     * The arrival. Until the scene has drawn a frame the plate is flat: no
+     * lights, no dither, no trail — the colour the CSS plate over it has, so
+     * the first drawn frame changes nothing on screen. Once drawn, the CSS
+     * plate is hidden (visibility is not transitioned, so this is the same
+     * frame) and the lights come up over `motion.reveal.lights.duration`,
+     * from `grow` smaller, on this element's own clock.
+     */
+    if (ctx.rendered && this.plateElement?.style.visibility !== 'hidden') {
+      if (this.plateElement) this.plateElement.style.visibility = 'hidden'
+    }
+    const { lights } = motion.reveal
+    const e =
+      this.arrival.t >= 1
+        ? 1
+        : ctx.rendered
+          ? advance(this.arrival, dt, lights.duration, ctx.reduced)
+          : 0
+    u.uDither.value = (2 / 255) * e
+
+    // The base size follows the geometric mean of the plate's sides, so the
+    // empty space around the lights stays in proportion on a wide plate and
+    // a tall one alike; each light then has its own size and its own breath
+    const base =
+      themed(preset.radius, ctx.theme) *
+      Math.sqrt(u.uSize.value.x * u.uSize.value.y) *
+      (1 - lights.grow * (1 - e))
+    const sigmaOf = (i: number, t: number) => {
+      const { spread, breathe, speed } = config.size
+      const own = 1 + spread * (hash(i) - 0.5) * 2
+      const breath =
+        1 + breathe * Math.sin(t * speed * (0.8 + 0.15 * i) + i * 2.3)
+      return base * own * breath
+    }
 
     this.feel.update(ctx.scroll.velocity, dt)
     const { energy } = this.feel
@@ -340,18 +426,23 @@ export class LightField
         this.lightX[i]!.set(orbitScratch.x)
         this.lightY[i]!.set(orbitScratch.y)
         this.offsets[i]!.set(0, 0)
-        u.uLights.value[i]!.set(orbitScratch.x, orbitScratch.y, sigma, i % 2)
+        u.uLights.value[i]!.set(
+          orbitScratch.x,
+          orbitScratch.y,
+          sigmaOf(i, 0),
+          i % 2,
+        )
       }
       this.follower = -1
       u.uCursorIndex.value = -1
       u.uCursorBoost.value = 1
       u.uStretch.value = 1
-      u.uIntensity.value = themed(preset.intensity, ctx.theme)
+      u.uIntensity.value = themed(preset.intensity, ctx.theme) * e
       return
     }
 
     // Trail: the plate lags the box in the direction the content is moving
-    this.lag.target = -preset.lag.max * this.feel.drive
+    this.lag.target = -preset.lag.max * this.feel.drive * e
     this.lag.update(dt)
     this.position.set(this.offset.x, this.offset.y + this.lag.value, 0)
 
@@ -398,7 +489,7 @@ export class LightField
       }
       x.update(dt)
       y.update(dt)
-      u.uLights.value[i]!.set(x.value, y.value, sigma, i % 2)
+      u.uLights.value[i]!.set(x.value, y.value, sigmaOf(i, ctx.time), i % 2)
     }
 
     this.hover.target = cursor ? 1 : 0
@@ -406,9 +497,9 @@ export class LightField
     const hover = Math.max(0, this.hover.value)
 
     u.uCursorBoost.value = 1 + config.cursorBoost * hover
-    u.uStretch.value = 1 + config.stretch * energy
+    u.uStretch.value = 1 + config.stretch * energy * e
     u.uIntensity.value =
-      themed(preset.intensity, ctx.theme) * (1 + config.brighten * energy)
+      themed(preset.intensity, ctx.theme) * (1 + config.brighten * energy) * e
   }
 
   dispose() {

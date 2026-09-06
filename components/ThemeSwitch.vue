@@ -1,19 +1,10 @@
 <template>
-  <!-- Creating a toggle switch with dark / light theme -->
+  <!-- The dark / light switch. Its look is CSS from the theme class; see ToggleSwitch. -->
   <ToggleSwitch
     :onIcon="SunIcon"
     :offIcon="MoonIcon"
-    :colors="{
-      bgOff: '#dde0ed',
-      bgOn: '#0C0D12',
-      thumbOff: '#0C0D12',
-      thumbOn: '#dde0ed',
-      iconOff: '#0C0D12',
-      iconOn: '#dde0ed',
-    }"
     :checked="isLight"
     label="Light mode"
-    fadeIn
     @update:checked="toggleTheme"
   />
 </template>

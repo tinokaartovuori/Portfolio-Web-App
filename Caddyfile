@@ -1,0 +1,20 @@
+{$DOMAIN} {
+	encode zstd gzip
+	# Precompressed .br/.gz from Nitro are served as-is; everything else is
+	# compressed on the fly
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	reverse_proxy app:3000
+}
+
+# The bare domain and any others 301 to the canonical host. REDIRECT_DOMAINS
+# is space-separated (Caddy accepts several addresses on one line) and must be
+# non-empty — an empty address is a parse error, so remove this block if you
+# have no domains to redirect.
+{$REDIRECT_DOMAINS} {
+	redir https://{$DOMAIN}{uri} permanent
+}

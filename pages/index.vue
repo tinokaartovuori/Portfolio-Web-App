@@ -17,8 +17,21 @@
   <ElementTracker threeReference="hero" object="LightField" variant="hero">
     <section
       ref="hero"
-      class="flex min-h-[100svh] w-full items-end px-[8vw] pb-[calc(var(--bar-safe)_+_3.5rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] sm:px-[10vw] md:items-center md:pb-[calc(var(--bar-safe)_+_2rem)]"
+      class="relative isolate flex min-h-[100svh] w-full items-end px-(--page-gutter) pb-[calc(var(--bar-safe-bottom)_+_3.5rem)] pt-[calc(var(--bar-safe)_+_2.5rem)] md:items-center md:pb-[calc(var(--bar-safe-bottom)_+_2rem)]"
     >
+      <!--
+        The plate, painted by the page from the first frame in the colour the
+        light field starts from (utils/plate.ts), so the hero has its frame
+        before WebGL is up; the light field then hides it and lights up.
+        `isolate` keeps -z-10 inside the section, behind the text and above
+        the canvas.
+      -->
+      <div
+        data-plate
+        aria-hidden="true"
+        class="plate pointer-events-none absolute -z-10"
+        :style="plateStyle('hero')"
+      />
       <div class="w-full">
         <h1
           class="max-w-[15ch] text-3xl font-light leading-[1.08] tracking-tight text-onyx dark:text-platinum xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl"
@@ -34,14 +47,10 @@
             :href="home?.hero.cta.to"
             class="group inline-flex items-baseline gap-3 text-base text-onyx dark:text-platinum sm:text-lg md:text-xl"
           >
-            <span
-              aria-hidden="true"
-              class="inline-block transition-transform duration-300 group-hover:translate-x-1"
-              >→</span
-            >
             <span class="border-b border-current/30 pb-1">{{
               home?.hero.cta.label
             }}</span>
+            <BobbingArrow />
           </a>
         </Magnetic>
       </div>
@@ -50,15 +59,18 @@
 
   <Marquee v-if="home?.marquee" :words="home.marquee" />
 
-  <section id="work" class="w-full px-[8vw] pb-40 pt-16 sm:px-[10vw] md:pt-24">
+  <section
+    id="work"
+    class="w-full px-(--page-gutter) pb-24 pt-16 md:pb-32 md:pt-24"
+  >
     <header ref="workHeader" class="mb-20 will-change-transform md:mb-28">
       <p
-        class="mb-4 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
+        class="mb-4 text-sm uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-base"
       >
         {{ home?.work.eyebrow }}
       </p>
       <h2
-        class="max-w-[18ch] text-2xl font-light leading-tight tracking-tight text-onyx dark:text-platinum sm:text-3xl md:text-4xl"
+        class="max-w-[18ch] text-3xl font-light leading-tight tracking-tight text-onyx dark:text-platinum sm:text-4xl md:text-[2.75rem]"
       >
         {{ home?.work.heading }}
       </h2>
@@ -76,7 +88,13 @@
           class="flex flex-col gap-8 md:flex-row md:items-start md:gap-16"
           :class="index % 2 === 1 ? 'md:flex-row-reverse' : ''"
         >
-          <!-- The backdrop lights each image from its page-edge side; see Backdrop.ts -->
+          <!--
+            Every card is 16:9 whatever the file is, so the column reads as one
+            set; the mesh crops the texture to the box (cover fit) and keeps
+            the side the content's `imagePosition` asks for. A project can hand
+            the card its own picture (`card`) when the crop of the lead image
+            is not it. The project page shows the lead image whole.
+          -->
           <div class="w-full md:w-3/5">
             <NuxtLink
               :to="project.path"
@@ -85,8 +103,11 @@
             >
               <ThreeImage
                 :threeReference="`project-${project.stem}`"
-                :imageUrl="project.image"
+                :imageUrl="project.card ?? project.image"
                 :alt="project.imageAlt"
+                sizes="(min-width: 768px) 54vw, 100vw"
+                class="aspect-video object-cover"
+                :style="{ objectPosition: project.imagePosition }"
               />
             </NuxtLink>
           </div>
@@ -96,77 +117,146 @@
             class="flex w-full flex-col will-change-transform md:w-2/5 md:pt-2"
           >
             <p
-              class="mb-3 font-mono text-xs uppercase tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
+              class="mb-3 font-mono text-sm uppercase tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
             >
-              {{ project.year }} — {{ project.role }}
+              <time :datetime="project.year">{{ project.year }}</time> —
+              {{ project.role }}
             </p>
             <h3
-              class="text-xl font-normal tracking-tight text-onyx dark:text-platinum sm:text-2xl md:text-3xl"
+              class="text-2xl font-normal tracking-tight text-onyx dark:text-platinum sm:text-3xl md:text-4xl"
             >
               {{ project.title }}
             </h3>
             <p
-              class="mt-4 max-w-[42ch] text-base leading-relaxed text-onyx/70 dark:text-platinum/70 sm:text-lg"
+              class="mt-4 max-w-[42ch] text-lg leading-relaxed text-onyx/70 dark:text-platinum/70 sm:text-xl"
             >
               {{ project.summary }}
             </p>
-            <NuxtLink
-              :to="project.path"
-              class="group mt-8 inline-flex w-fit items-baseline gap-2 text-sm text-onyx dark:text-platinum sm:text-base"
+            <!-- A store rating, where the project has one -->
+            <Rating
+              v-if="project.rating"
+              :value="project.rating.value"
+              :source="project.rating.source"
+              class="mt-5"
+            />
+            <!--
+              The way in, and beside it any link the content marks for the
+              card (`card: true`): the one that is the work itself, where
+              the page is about it — the film on YouTube. The rest of the
+              links stay on the project page. The row never wraps: on a
+              phone the link shows its `short` label instead.
+            -->
+            <p
+              class="mt-8 flex items-baseline gap-x-6 text-base sm:gap-x-8 sm:text-lg"
             >
-              <span class="border-b border-current/30 pb-1">Read more</span>
-              <span
-                aria-hidden="true"
-                class="inline-block transition-transform duration-300 group-hover:translate-x-1"
-                >→</span
+              <NuxtLink
+                :to="project.path"
+                class="group inline-flex items-baseline gap-2 text-onyx dark:text-platinum"
               >
-            </NuxtLink>
+                <span class="border-b border-current/30 pb-1"
+                  >Read more<span class="sr-only">
+                    about {{ project.title }}</span
+                  ></span
+                >
+                <BobbingArrow direction="right" />
+              </NuxtLink>
+              <ProjectLink
+                v-for="link in project.links?.filter((l) => l.card)"
+                :key="link.to"
+                :to="link.to"
+                :label="link.label"
+                :short="link.short"
+                :icon="link.icon"
+                :lang="link.lang"
+              />
+            </p>
           </div>
         </div>
       </li>
     </ol>
   </section>
 
+  <!--
+    The about section: the site is one page, so this is where the top bar's
+    "About" lands. The portrait is a wash behind the section at every size —
+    a ThreeImage with the background treatment (monochrome, very faint, its
+    edges dissolved, hanging back as the page scrolls), absolutely placed so
+    it adds no height of its own — and the text is laid over it: the
+    standfirst across the width, the prose in one column on the left. From
+    md up the photograph takes the section's height on the right, hanging a
+    little past the edge; below md the text has the whole width, so the
+    photograph is a wide box hung past the right edge behind the standfirst
+    and the first paragraph, with the face in the upper right, and the rest
+    of the prose runs off it. The canvas is behind the DOM whatever the boxes
+    do.
+
+    The anchor (#about) lands the eyebrow at --bar-safe + 2rem, the hero's
+    own top line: scroll-margin-top makes up the difference between that and
+    the padding, so the padding is the gap to the work above and nothing else.
+  -->
   <section
     v-if="about"
-    ref="aboutTeaser"
-    class="w-full px-[8vw] pb-24 will-change-transform sm:px-[10vw] md:pb-32 lg:px-[14vw]"
+    id="about"
+    class="relative w-full overflow-x-clip scroll-mt-[calc(var(--bar-safe)_-_2rem)] px-(--page-gutter) pb-24 pt-16 md:scroll-mt-[calc(var(--bar-safe)_-_4rem)] md:pb-32 md:pt-24"
   >
-    <p
-      class="mb-6 text-xs uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-sm"
+    <!--
+      The wash is kept inside the section: hanging back as it does (parallax)
+      a taller box rose behind the last project. The photograph covers the
+      box (cover fit, cropped on the face), so the box's shape is the
+      picture's: below md it keeps the file's own aspect, wide as the
+      viewport and more, hung past the right edge; from md up it is the
+      section's height less a margin, and the width per breakpoint decides
+      how much of the face the tall crop keeps.
+    -->
+    <div
+      class="pointer-events-none absolute bottom-[2%] right-[-34vw] aspect-[1200/1275] w-[124vw] xs:right-[-30vw] xs:w-[112vw] sm:right-[-24vw] sm:w-[88vw] md:bottom-[6%] md:right-[-12vw] md:top-[6%] md:aspect-auto md:w-[74vw] lg:right-[-8vw] lg:w-[66vw] xl:w-[60vw]"
     >
-      {{ home?.about.eyebrow }}
-    </p>
-    <p
-      class="max-w-[34ch] text-2xl font-light leading-snug tracking-tight text-onyx dark:text-platinum sm:text-3xl md:text-4xl"
-    >
-      {{ about.standfirst }}
-    </p>
-    <Magnetic class="mt-10">
-      <NuxtLink
-        to="/about"
-        class="group inline-flex items-baseline gap-3 text-base text-onyx dark:text-platinum sm:text-lg"
+      <ThreeImage
+        threeReference="portrait"
+        :imageUrl="about.image"
+        :alt="about.imageAlt"
+        variant="background"
+        sizes="(min-width: 1280px) 60vw, (min-width: 1024px) 66vw, (min-width: 768px) 74vw, 124vw"
+        class="h-full object-cover object-[50%_45%]"
+      />
+    </div>
+
+    <div ref="aboutText" class="relative will-change-transform">
+      <p
+        class="mb-6 text-sm uppercase tracking-[0.18em] text-onyx/50 dark:text-platinum/50 sm:text-base"
       >
-        <span class="border-b border-current/30 pb-1">{{
-          home?.about.link
-        }}</span>
-        <span
-          aria-hidden="true"
-          class="inline-block transition-transform duration-300 group-hover:translate-x-1"
-          >→</span
-        >
-      </NuxtLink>
-    </Magnetic>
+        {{ home?.about.eyebrow }}
+      </p>
+      <h2
+        class="max-w-[30ch] text-3xl font-light leading-snug tracking-tight text-onyx dark:text-platinum sm:text-4xl md:text-[2.75rem] lg:text-[3.5rem]"
+      >
+        {{ about.standfirst }}
+      </h2>
+
+      <div
+        class="prose-body mt-12 max-w-[56ch] text-onyx dark:text-platinum md:mt-16 md:w-1/2"
+      >
+        <ContentRenderer :value="about" />
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect, onUnmounted } from 'vue'
+import {
+  ref,
+  computed,
+  watchEffect,
+  onMounted,
+  onUnmounted,
+  nextTick,
+} from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
 import { useTrail } from '~/composables/useTrail'
+import { plateStyle } from '~/utils/plate'
 import { motion } from '~/motion.config'
 
 /*
@@ -175,9 +265,9 @@ import { motion } from '~/motion.config'
  * image columns are left alone — their meshes carry the trail themselves.
  */
 const workHeader = ref<HTMLElement | null>(null)
-const aboutTeaser = ref<HTMLElement | null>(null)
+const aboutText = ref<HTMLElement | null>(null)
 useTrail(workHeader, motion.trail.heading)
-useTrail(aboutTeaser, motion.trail.heading)
+useTrail(aboutText, motion.trail.text)
 
 // One ref per project text column, created as the list renders
 const textColumns = Array.from({ length: 8 }, () =>
@@ -229,17 +319,139 @@ onUnmounted(() => {
   storedHeroHeight.value = 0
 })
 
-const { data: projects } = await useAsyncData('projects', () =>
-  queryCollection('projects').order('order', 'ASC').all(),
-)
+/*
+ * Arriving with a hash from another page (About or Contact in the top bar on
+ * a project page): the router scrolls to the section as soon as the page is
+ * in, but the images have no height until they load, so the section is
+ * still further down than where the router put us. Once every image is in,
+ * the position is corrected — a jump, which the scroll integrator adopts.
+ */
+const route = useRoute()
+onMounted(async () => {
+  if (!route.hash) return
+  const pending = Array.from(document.images).filter((img) => !img.complete)
+  await Promise.all(
+    pending.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          img.addEventListener('load', () => resolve(), { once: true })
+          img.addEventListener('error', () => resolve(), { once: true })
+        }),
+    ),
+  )
+  await nextTick()
+  let target: Element | null = null
+  try {
+    target = document.querySelector(decodeURIComponent(route.hash))
+  } catch {
+    return
+  }
+  if (target) {
+    // Honouring scroll-margin-top, as the router's own hash scroll did
+    const margin = parseFloat(getComputedStyle(target).scrollMarginTop) || 0
+    window.scrollTo(
+      0,
+      target.getBoundingClientRect().top + window.scrollY - margin,
+    )
+  }
+})
 
-// The teaser shows the about page's standfirst
+const { data: projects } = await useProjects()
+
+// The about section: standfirst and portrait from the frontmatter, the
+// prose from the body
 const { data: about } = await useAboutContent()
 
-useSeoMeta({
-  title: () => home.value?.title ?? 'Portfolio',
-  description: () => home.value?.description,
-  ogTitle: () => home.value?.title ?? 'Portfolio',
-  ogDescription: () => home.value?.description,
+const { absolute } = useSiteUrl()
+
+useSeo({
+  // No title: the layout's default tagline title stands for the home page
+  description:
+    home.value?.description ??
+    'Tino Kaartovuori is an engineer in Finland who designs and builds web apps, software and hardware.',
+  path: '/',
+  // The first project's og crop reads better as a social card than a portrait
+  image: projects.value?.[0]?.image,
+  imageAlt: projects.value?.[0]?.imageAlt,
 })
+
+// The site's identity: a WebSite and a Person, the Person referenced by @id
+// from every project page's JSON-LD
+const contact = computed(() => home.value?.contact)
+const socials = computed(() =>
+  (contact.value?.links ?? [])
+    .map((l) => l.to)
+    // The LinkedIn placeholder is not a real profile yet
+    .filter((to) => to && to !== 'https://www.linkedin.com/'),
+)
+useJsonLd([
+  {
+    '@type': 'WebSite',
+    '@id': `${absolute('/')}#website`,
+    url: absolute('/'),
+    name: 'Tino Kaartovuori',
+    inLanguage: 'en',
+    publisher: { '@id': `${absolute('/')}#person` },
+  },
+  {
+    '@type': 'Person',
+    '@id': `${absolute('/')}#person`,
+    name: contact.value?.name ?? 'Tino Kaartovuori',
+    url: absolute('/'),
+    email: contact.value?.email,
+    image: absolute(about.value?.image ?? '/images/portrait.jpg'),
+    jobTitle: 'Engineer',
+    description: home.value?.description,
+    knowsAbout: home.value?.marquee,
+    sameAs: socials.value,
+  },
+])
 </script>
+
+<style scoped>
+/*
+ * Scoped rather than a Tailwind typography plugin: the body is a handful of
+ * elements and the plugin's own colour scale would have to be overridden for
+ * both themes anyway.
+ */
+.prose-body :deep(p),
+.prose-body :deep(ul) {
+  margin-bottom: 1.4em;
+  font-size: 1.2rem;
+  line-height: 1.65;
+  color: color-mix(in srgb, currentColor 78%, transparent);
+}
+
+/* A list in the prose: a dash for a marker, hanging so lines align */
+.prose-body :deep(li) {
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+
+.prose-body :deep(li)::before {
+  content: '–';
+  display: inline-block;
+  width: 1.2em;
+  text-indent: 0;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.prose-body :deep(h2) {
+  margin-top: 1.6em;
+  margin-bottom: 0.9em;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+.prose-body :deep(a) {
+  color: inherit;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.prose-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+</style>

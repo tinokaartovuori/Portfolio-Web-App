@@ -30,4 +30,17 @@ export interface FrameContext {
    * backdrop's lights come on as the hero scrolls away.
    */
   heroHeight: number
+  /**
+   * True once the scene has drawn at least one frame. Until then nothing may
+   * hide or fade the DOM version of what it draws (the CSS plates, the
+   * `<img>`s): the page is what the visitor sees.
+   */
+  rendered: boolean
+  /**
+   * The scene's reveal, 0..1: starts the frame after the first render once
+   * the hero is measured, and climbs over `motion.reveal.scene`. Scene-wide
+   * effects (the dust) fade in on it; element-bound meshes run their own
+   * arrival clock (Arrival.ts) instead.
+   */
+  reveal: number
 }

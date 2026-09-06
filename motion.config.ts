@@ -77,14 +77,15 @@ export const motion = {
     bounceMinVelocity: 500,
     /**
      * Faster than any flick: an arrival above this is a jump (scroll
-     * restoration, a hash navigation) and must not bounce.
+     * restoration, a hash navigation, a page change) and must not bounce,
+     * and a position adopted from outside at this speed leaves no velocity.
      */
     bounceMaxVelocity: 8000,
   },
 
   /**
    * How every scroll-driven effect reads the scroll (utils/scrollFeel.ts):
-   * the images, the light fields, the glow plates and the marquee all derive
+   * the images, the light fields, the dust and the marquee all derive
    * their "how fast" from these three numbers, so they agree on it.
    */
   scrollFeel: {
@@ -112,15 +113,48 @@ export const motion = {
   theme: { smoothing: 8 },
 
   /**
+   * How the site comes alive on load, without a preloader. The page paints as
+   * a plain document first (text, a CSS plate where each light field will be,
+   * the photographs as ordinary `<img>`s); when the WebGL layer is up it is
+   * drawn *under* each of those and the DOM version is then hidden or faded,
+   * so nothing is ever half-shown over the page colour. Durations in seconds.
+   * The envelopes are timed clocks eased with a smoothstep, not `damp`: a
+   * fade needs a definite end (a CSS plate to hide, a final `opacity: 0`).
+   */
+  reveal: {
+    /** DOM-side envelope (scroll track, grain), from the first client frame. */
+    page: 0.5,
+    /** Scene-wide envelope (the dust), from the frame after the first render. */
+    scene: 0.8,
+    /** A light field's lights fade in over `duration`, from `grow` smaller. */
+    lights: { duration: 0.8, grow: 0.15 },
+    /** A photograph: its `<img>` fades out over the finished mesh while the
+     * rim, trail, lean and float come in. */
+    image: 0.3,
+    /** The background portrait fades up to its treatment's own alpha. */
+    background: 0.8,
+  },
+
+  /**
+   * Every grain on the site — the film in the photographs, the frost on the
+   * light fields — is re-rolled this many times a second. Slow, so it lives
+   * rather than fizzes; a still grain reads as texture, a fast one as noise.
+   */
+  grain: { rate: 2.5 },
+
+  /**
    * The colours the decorative meshes draw with, as `[light, dark]` hex pairs
    * blended by the theme. `accent` and `cool` are the two light hues; `base`
-   * is the frosted plate tint, the opposite of the page colour so it reads as
-   * a faint pane on either.
+   * is the text colour, the opposite of the page colour; `plate` is what the
+   * light fields' plates are pushed toward — past the page colour, lighter
+   * on the light theme and darker on the dark one, so the lights on them
+   * have contrast to show against.
    */
   palette: {
     accent: [0xbf5f84, 0xe08bab],
     cool: [0x5f6bc4, 0x8b9cf0],
     base: [0x0c0d12, 0xdde0ed],
+    plate: [0xffffff, 0x000000],
   },
 
   /**
@@ -152,23 +186,36 @@ export const motion = {
     bend: 0.6,
 
     /**
-     * The bubble: while scrolling the page bulges like a sphere seen face-on.
-     * Vertices near the viewport centre come toward the camera, vertices near
-     * the edges go away, each image tilts away from the centre and drifts
-     * outward — so where an image sits on screen decides how it moves.
+     * The bubble: while scrolling the page curves like a sphere seen face-on,
+     * and where an image sits on screen decides how it moves. The sign of
+     * all three picks which way: positive bulges toward the viewer (the
+     * centre comes forward, the edges go back, images tilt away from the
+     * centre and drift outward); negative — the current setting — curves
+     * inward like a bowl (the centre sinks back, the edges come forward,
+     * images turn toward the centre and draw in).
      */
     bubble: {
       /** z travel in world units (≈ px) between the viewport centre and its
        * corners at full energy. */
-      depth: 90,
-      /** Tilt away from the viewport centre at full energy, radians at the
-       * viewport edge. */
-      tilt: 0.075,
-      /** Outward drift at full energy, px at the viewport edge. */
-      spread: 12,
+      depth: -90,
+      /** Tilt at full energy, radians at the viewport edge. */
+      tilt: -0.075,
+      /** Drift at full energy, px at the viewport edge. */
+      spread: -12,
     },
     /** Extra push-back in world units at peak velocity, on top of the bubble. */
     recede: 16,
+
+    /**
+     * The lean: on a wide viewport each image turns a little toward the
+     * viewport centre, so the two columns face the reader like the wings of
+     * a screen. `yaw` is the turn about the vertical axis at the viewport
+     * edge, radians, scaled by how far from the centre the image sits;
+     * `roll` the same about the depth axis (the top leaning inward), for a
+     * flatter, hung-askew look instead. Nothing below `from` px of viewport
+     * width, the full angle from `to`.
+     */
+    lean: { yaw: 0.2, roll: 0, from: 1024, to: 1600 },
 
     /** Idle drift so the images read as floating rather than pasted on. */
     float: { amplitude: 4, speed: 0.55 },
@@ -195,37 +242,101 @@ export const motion = {
     /** Chromatic aberration in UV units at peak velocity / full hover. */
     aberration: { scroll: 0.006, hover: 0.004 },
 
-    /** Texture overscan so the parallax has room to move without showing edges. */
-    zoom: 0.92,
-    /** Vertical parallax inside the frame, in UV units per viewport height. */
-    parallax: 0.1,
+    /**
+     * A hairline just inside the edge of the photograph in the text colour,
+     * `width` px wide at `alpha`: the plane reads as a thing with an edge
+     * rather than a picture pasted on. 0 alpha for none.
+     */
+    rim: { width: 1, alpha: 0.28 },
 
     /**
-     * Glitch on a hard scroll: horizontal slices of the image tear sideways
-     * once |drive| passes `start`, fully by `full`. Which slices tear, and
-     * how far, is re-rolled `rate` times a second.
+     * Texture overscan, as the share of the image the plane shows: 1 is the
+     * whole photograph. Below 1 the crop has room to slide inside the frame
+     * (`parallax`, in UV units per viewport height, clamped to that room),
+     * which is the only thing the overscan buys — the trail, the bend, the
+     * bubble and the cursor lens are all geometry and need none. It was 0.92
+     * with a parallax of 0.1 and read as an unexplained crop.
      */
-    glitch: {
-      start: 0.35,
-      full: 0.75,
-      /** Slices across the image's height. */
-      slices: 26,
-      rate: 10,
-      /** Furthest tear, in UV units. */
-      shift: 0.09,
-      /** Share of slices torn at full glitch. */
-      share: 0.5,
-    },
+    zoom: 1,
+    parallax: 0,
 
-    /** Film grain inside the image only: amplitude in colour units, and how
-     * many times a second it is re-rolled. */
-    grain: { amount: 0.035, rate: 8 },
+    /** Film grain inside the image only, amplitude in colour units; it is
+     * re-rolled at `motion.grain.rate` like every grain on the site. */
+    grain: { amount: 0 },
+
+    /**
+     * Named treatments a ThreeImage can ask for (`variant`). `background`
+     * is an image that sits behind the page rather than on it — the
+     * portrait under the about text: monochrome (`mono`, 0..1), faded to
+     * this share of transparency, dissolved from a rounded shape inside its
+     * box outward over this share of its half-width (`edge`), moving at
+     * less than the page's speed (`parallax`: the share of its distance
+     * from the viewport centre it hangs back by), turned toward the
+     * viewport centre `lean` times as far as the other images, and keeping
+     * only `motion` of the trail, bend, bubble, float and aberration,
+     * `hover` of the cursor lens, `rim` of the hairline and `halation` of
+     * the halation (0 for none):
+     * scenery that jumps out of the background is noise.
+     */
+    variants: {
+      background: {
+        mono: 1,
+        fade: 0.74,
+        edge: 0.55,
+        parallax: 0.12,
+        lean: 2,
+        motion: 0.25,
+        hover: 0,
+        rim: 0,
+        halation: 0,
+        /** The `<img>` stays hidden and the mesh fades in from nothing: the
+         * treatment has no DOM equivalent to hand over from. */
+        domFirst: false,
+      },
+    },
   },
 
   /**
-   * Frosted-glass light fields (LightField): soft lights drifting behind a
-   * rounded plate pinned to a DOM box. The hero and the footer are presets of
-   * the same thing.
+   * Halation (HalationPass, the one post-processing pass): the highlights of
+   * the photographs bleed outward in the accent colour, as on film, a little
+   * at rest and more on a hard scroll. `threshold` and `knee` are in linear
+   * luminance (the render target is linear), and `curve` is the exponent on
+   * what is over the threshold: 1 is linear, so the whites bleed several
+   * times more than the mid-tones; below 1 the mid-tones come nearer the
+   * whites, so the halo sits in the whole photograph rather than on its
+   * highlights alone. The halo is drawn at
+   * `1 / scale` of the canvas and blurred with a 9-tap gaussian `iterations`
+   * times, `radius` buffer px between taps, so its reach in canvas px is
+   * about `scale * radius * 4 * iterations`. `rest` is the strength that is
+   * always there (0: a still page shows no halo, it is a thing the scroll
+   * does); `scroll` is added on top once |drive| passes `start`,
+   * fully by `full`, through a damp at `smoothing` (per second) so it swells
+   * and fades as one motion. Colour is `palette.accent`, blended by theme.
+   *
+   * A horizontal-slice glitch and then a frost (a mip-bias defocus) lived in
+   * the image shader before this; both were taken out, the first as the wrong
+   * era, the second as too little. A soft shadow under the meshes, drawn
+   * from the same blur, was tried for depth on the light theme and taken out
+   * too: a drop shadow under a photograph is a different site.
+   */
+  halation: {
+    threshold: 0.25,
+    knee: 0.2,
+    curve: 0.55,
+    scale: 4,
+    radius: 2.5,
+    iterations: 2,
+    rest: 0,
+    scroll: 1.2,
+    start: 0.15,
+    full: 0.6,
+    smoothing: 5,
+  },
+
+  /**
+   * Light fields (LightField): soft lights drifting on a frosted plate pinned
+   * to a DOM box, the plate a step past the page colour so they stand out.
+   * The hero and the footer are presets of the same thing.
    */
   lightField: {
     /**
@@ -238,6 +349,20 @@ export const motion = {
     hoverSpring: { stiffness: 120, damping: 20 },
     /** Extra intensity on the light under the pointer. */
     cursorBoost: 0.5,
+    /**
+     * The lights are not all one size: each is bigger or smaller than the
+     * preset's radius by up to `spread` (fixed per light), and breathes by
+     * up to `breathe` on its own slow sine at about `speed` rad/s.
+     */
+    size: { spread: 0.3, breathe: 0.2, speed: 0.3 },
+    /**
+     * A second, twice as wide gaussian under each light, at this share of
+     * the first, `[light, dark]` theme. A light on a pale plate shows only
+     * its core — the tail of a plain gaussian is too faint a tint to see on
+     * white, where on black the same tail reads as glow — so the light theme
+     * gets a broad shoulder to read the same diameter.
+     */
+    halo: [0.9, 0.2],
     /**
      * A light stays where the pointer left it and carries on from there; it
      * drifts back toward its own seat on the ring at this rate per second —
@@ -258,22 +383,29 @@ export const motion = {
       hero: {
         /** Lights in the field, at most 6. */
         lights: 5,
-        /** Gaussian sigma of one light, as a share of the plate's shorter side. */
-        radius: 0.2,
+        /**
+         * Gaussian sigma of one light, as a share of the geometric mean of
+         * the plate's sides (so a wide plate gets bigger lights than a tall
+         * one of the same height and the empty space stays in proportion),
+         * `[light, dark]` theme: a light on a pale plate shows less of its
+         * tail, so it is drawn bigger to read the same size.
+         */
+        radius: [0.14, 0.11],
         /**
          * The lights sit evenly on a ring around the plate's centre (radii in
          * UV units) that turns slowly as a whole, and each wobbles around its
          * seat. Even seats keep them from piling up on one another.
          */
         orbit: {
-          spin: 0.1,
-          ring: [0.32, 0.28],
-          wobble: { speed: 0.4, amplitude: 0.07 },
+          spin: 0.16,
+          ring: [0.34, 0.3],
+          wobble: { speed: 0.55, amplitude: 0.11 },
         },
         /** Peak alpha of one light, `[light, dark]` theme. */
-        intensity: [0.5, 0.48],
-        /** Alpha of the frosted plate itself, `[light, dark]` theme. */
-        baseAlpha: [0.02, 0.04],
+        intensity: [0.8, 0.68],
+        /** How far the plate is pushed from the page colour toward
+         * `palette.plate`, `[light, dark]` theme. */
+        plate: [0.8, 0.6],
         /** The plate is drawn this many px inside the element's box. */
         inset: 20,
         cornerRadius: 24,
@@ -282,14 +414,14 @@ export const motion = {
       },
       footer: {
         lights: 3,
-        radius: 0.36,
+        radius: [0.16, 0.13],
         orbit: {
-          spin: 0.08,
-          ring: [0.34, 0.2],
-          wobble: { speed: 0.3, amplitude: 0.06 },
+          spin: 0.14,
+          ring: [0.36, 0.22],
+          wobble: { speed: 0.45, amplitude: 0.1 },
         },
-        intensity: [0.45, 0.5],
-        baseAlpha: [0.02, 0.04],
+        intensity: [0.75, 0.68],
+        plate: [0.8, 0.6],
         inset: 0,
         cornerRadius: 28,
         lag: { max: 10, stiffness: 120, damping: 20 },
@@ -298,42 +430,112 @@ export const motion = {
   },
 
   /**
-   * The line bands (LineBands): bundles of parallel lines flowing through the
-   * depth behind the page, each following one waving path and fanning open
-   * and closed along it. One colour, the text colour, at a low alpha; the
-   * near bands wide and blurred, the far ones crisp.
+   * The dust (Particles): the page's depth. Layers of particles behind the
+   * page, far to near, each moving with the scroll by its own share of the
+   * page's speed, so the far ones creep and the near ones nearly keep up —
+   * the parallax is what reads as depth. Far particles are tiny and crisp,
+   * near ones large and soft, like dust seen past a focused lens. Every one
+   * drifts on its own, breathes, and streaks along the scroll when the page
+   * moves fast. One colour, the text colour, at a low alpha, with a share of
+   * them in the two light hues.
    */
-  bands: {
-    count: 5,
-    /** Lines in a band, points along each, and the spacing between lines, screen px. */
-    strands: 14,
-    points: 96,
-    spacing: 9,
-    /** Depth range `[farthest, nearest]`, all behind the page (the page is at 0). */
-    depth: [-950, -280],
-    /** Line width, screen px, `[far, near]`. */
-    width: [1, 7],
-    /** Alpha, `[light, dark]` theme. */
-    alpha: [0.3, 0.2],
-    /** How far past the viewport's half width a band reaches, as a share. */
-    extent: 1.4,
-    /** Largest slope of a band across the viewport. */
-    tilt: 0.35,
-    /** The waves on the path: amplitude (screen px), base frequency (1/px)
-     * and how fast they travel (rad/s). */
-    wave: { amplitude: 110, frequency: 0.0032, rate: 0.35 },
-    /** The fan: how much the spacing swells (share), how often along the
-     * band (1/px) and how fast it moves (rad/s). */
-    fan: { amount: 0.55, frequency: 0.0026, rate: 0.3 },
-    /** Scrolling quickens the waves by this share at full energy. */
-    scroll: { boost: 2 },
-    /** The pointer pushes the path away within `radius` px by up to `bend` px,
-     * through a slow spring. */
-    cursor: { radius: 220, bend: 70, spring: { stiffness: 40, damping: 12 } },
-    /** They come on over this share of the viewport height as the hero scrolls away. */
-    fadeSpan: 0.6,
-    /** The whole field rides a trail of its own, scaled by depth. */
+  particles: {
+    /**
+     * The layers, far to near. `parallax` is the share of the page's scroll
+     * the layer moves by (1 would move with the page); `density` is
+     * particles per 1000×1000 px of viewport; `size` the diameter range in
+     * px; `soft` 0 for a crisp disc, 1 for a gaussian; `alpha` the layer's
+     * peak alpha; `drift` how far it wanders, px; `streak` how much of the
+     * scroll streak it takes.
+     */
+    layers: [
+      {
+        parallax: 0.2,
+        density: 110,
+        size: [1, 1.8],
+        soft: 0.1,
+        alpha: 0.5,
+        drift: 8,
+        streak: 0,
+      },
+      {
+        parallax: 0.45,
+        density: 50,
+        size: [1.8, 3],
+        soft: 0.3,
+        alpha: 0.38,
+        drift: 14,
+        streak: 0.25,
+      },
+      {
+        parallax: 0.75,
+        density: 16,
+        size: [4, 8],
+        soft: 0.75,
+        alpha: 0.2,
+        drift: 22,
+        streak: 0.6,
+      },
+      {
+        parallax: 1,
+        density: 4,
+        size: [16, 34],
+        soft: 1,
+        alpha: 0.08,
+        drift: 32,
+        streak: 1,
+      },
+    ],
+    /** Multiplier on every layer's alpha, `[light, dark]` theme. */
+    alpha: [0.9, 1],
+    /** Share of the particles drawn in the light hues instead of ink. */
+    tint: 0.3,
+    /**
+     * The wander: each particle's own slow loop, this many rad/s at most,
+     * and a rise, px/s, as a share of its layer's drift.
+     */
+    wander: { speed: 0.35, rise: 0.3 },
+    /** Each particle brightens and dims on its own: rate rad/s, depth 0..1. */
+    twinkle: { rate: 0.5, depth: 0.5 },
+    /**
+     * The streak: a particle stretches along the scroll by its speed on
+     * screen times this many seconds (a shutter time), up to this many px.
+     */
+    streak: { exposure: 0.03, max: 90 },
+    /** The near layers shift away from the pointer by up to this many px. */
+    pointer: { shift: 28, spring: { stiffness: 40, damping: 12 } },
+    /** Nothing draws behind the hero; the dust fades in over this many px
+     * below its bottom edge. */
+    heroFade: 200,
+    /** The whole field rides a trail of its own, like the images, scroll px. */
     lag: { max: 40, stiffness: 90, damping: 18 },
+  },
+
+  /**
+   * The grain over the page (NoiseOverlay): a fixed canvas of grey noise laid
+   * over everything, the canvas and the text alike, so the whole site has one
+   * surface.
+   */
+  noise: {
+    /** One grain, in CSS px; the noise is drawn at that resolution and
+     * scaled up unfiltered. */
+    grain: 1.4,
+    /** Opacity of the layer, `[light, dark]` theme. A few percent: enough
+     * to read as a surface up close, invisible as a layer. */
+    alpha: [0.05, 0.06],
+    /**
+     * Re-rolled this many times a second — slower than the grain in the
+     * photographs and the frost, because this one sits over the text, where
+     * a lively grain reads as interference. Still under reduced motion.
+     */
+    rate: 0.6,
+  },
+
+  /** The scroll prompt in the bottom bar (BottomBar.vue). */
+  scrollPrompt: {
+    /** Gone once the page has scrolled this many px: it is an invitation,
+     * and one already taken up has nothing left to say. */
+    hideAfter: 48,
   },
 
   /** The index row above each project (ProjectIndex.vue). */
@@ -388,6 +590,21 @@ export const motion = {
     strength: 0.16,
     /** Close to critical: it follows and lets go without a wobble. */
     spring: { stiffness: 170, damping: 24 },
+  },
+
+  /** The heart in the top bar (LikeButton.vue). */
+  like: {
+    /** On press the heart is thrown to this scale and springs back. Under
+     * critical damping, so it overshoots a little on the way down. */
+    pop: 1.5,
+    popSpring: { stiffness: 520, damping: 13 },
+    /** The ring the press leaves behind: its size at the end as a multiple
+     * of the heart, and the decay rate per second it fades out at. */
+    ring: 2.8,
+    ringSmoothing: 4.5,
+    /** Growth under the pointer, as a share. */
+    hoverLift: 0.12,
+    hoverSpring: { stiffness: 220, damping: 20 },
   },
 
   /**

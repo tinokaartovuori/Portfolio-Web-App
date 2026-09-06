@@ -21,9 +21,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePreferredReducedMotion } from '@vueuse/core'
-import { gsap } from 'gsap'
+import { useFrame } from '~/composables/useFrameLoop'
 
 const props = defineProps({
   text: {
@@ -38,101 +38,79 @@ const props = defineProps({
 })
 
 // A literal ' ' would collapse against the neighbouring inline-block letters
-const NON_BREAKING_SPACE = '\u00a0'
+const NON_BREAKING_SPACE = ' '
+
+/*
+ * The wave: each letter dims to `LOW` and back over `PULSE` seconds, starting
+ * `STAGGER` after the one before it; one pass is over once the last letter
+ * has come back up. Without `onHover` it repeats for as long as the page is
+ * open; with it, a pass starts on mouseenter and the wave keeps going while
+ * the pointer stays.
+ */
+const LOW = 0.4
+const PULSE = 1
+const STAGGER = 0.1
 
 const mouseIn = ref(false)
-let animationPlaying = false
-
 const reducedMotion = usePreferredReducedMotion()
 const prefersReducedMotion = computed(() => reducedMotion.value === 'reduce')
 
 const letterElements = ref<HTMLElement[]>([])
 
-// Built on mount rather than in setup: creating a timeline wakes gsap's ticker,
-// which during SSR would spin a timer in the render process for no reason.
-let timeline: ReturnType<typeof gsap.timeline> | null = null
+/** Seconds into the current pass, or -1 while still. */
+let local = -1
+const last: number[] = []
 
-onMounted(() => {
-  const created = gsap.timeline({
-    paused: true,
-    onComplete: () => {
-      if (!props.onHover) return // if onHover is false
-      if (mouseIn.value && !prefersReducedMotion.value) {
-        created.play(0)
-        animationPlaying = true
-        return // Animation continued
-      }
-      // Animation stopped
-      created.pause()
-      animationPlaying = false
-    },
-  })
+const passLength = () => (props.text.length - 1) * STAGGER + PULSE
 
-  // Put every letter in a timeline with 100ms delay from each
-  letterElements.value.forEach((letterElement, index) => {
-    // Creating an animation to timeline where opacity is pulsing from 1 to 0.5 and back up
-    // Each letter has 100ms delay from each other
-    created.to(
-      letterElement,
-      {
-        opacity: 0.4,
-        duration: 0.5,
-        ease: 'power1.inOut',
-      },
-      index * 0.1,
-    )
-    created.to(
-      letterElement,
-      {
-        opacity: 1,
-        duration: 0.5,
-        ease: 'power1.inOut',
-      },
-      index * 0.1 + 0.5,
-    )
-  })
+const ease = (t: number) => t * t * (3 - 2 * t)
 
-  timeline = created
-
-  // Nothing pulses for visitors who asked for reduced motion
-  if (prefersReducedMotion.value) return
-
-  // If onHover is false, repeat the animation forever
-  if (!props.onHover) {
-    created.repeat(-1)
-    created.play(0)
-    animationPlaying = true
+function writeOpacities(time: number) {
+  const letters = letterElements.value
+  for (let i = 0; i < letters.length; i++) {
+    const x = time - i * STAGGER
+    let dim = 0
+    if (x > 0 && x < PULSE) {
+      const half = PULSE / 2
+      dim = x < half ? ease(x / half) : 1 - ease((x - half) / half)
+    }
+    const opacity = Math.round((1 - (1 - LOW) * dim) * 1000) / 1000
+    if (last[i] === opacity) continue
+    last[i] = opacity
+    letters[i]!.style.opacity = String(opacity)
   }
-})
+}
 
-onUnmounted(() => {
-  // gsap's root timeline holds on to this otherwise
-  timeline?.kill()
-  timeline = null
-})
+function rest() {
+  local = -1
+  writeOpacities(-1)
+}
 
-watch(mouseIn, (value) => {
-  if (!value) return
-  if (!props.onHover) return
-  if (prefersReducedMotion.value) return
-  if (animationPlaying) return
-  // Start playing animation on hover
-  timeline?.play(0)
-  animationPlaying = true
-})
-
-// The preference can flip while the page is open
-watch(prefersReducedMotion, (reduce) => {
-  if (!timeline) return
-  if (reduce) {
-    // Rewinding restores every letter to full opacity
-    timeline.pause(0)
-    animationPlaying = false
+useFrame('render', (dt) => {
+  if (prefersReducedMotion.value) {
+    if (local >= 0) rest()
     return
   }
-  if (props.onHover) return
-  timeline.repeat(-1)
-  timeline.play(0)
-  animationPlaying = true
+  if (local < 0) {
+    // Start a pass: always without onHover, on the pointer with it
+    if (props.onHover && !mouseIn.value) return
+    local = 0
+  }
+  local += dt
+  if (local >= passLength()) {
+    // A pass is over: go again, unless this is a hover wave and the pointer
+    // has left
+    if (props.onHover && !mouseIn.value) {
+      rest()
+      return
+    }
+    local -= passLength()
+  }
+  writeOpacities(local)
+})
+
+// Nothing pulses for visitors who asked for reduced motion
+watch(prefersReducedMotion, (reduce) => {
+  if (reduce) rest()
 })
 </script>

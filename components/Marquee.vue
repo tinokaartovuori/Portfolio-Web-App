@@ -30,7 +30,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useElementSize } from '@vueuse/core'
-import { gsap } from 'gsap'
 import { useFrame } from '~/composables/useFrameLoop'
 import { scrollFrame } from '~/composables/useSmoothScroll'
 import { ScrollFeel } from '~/utils/scrollFeel'
@@ -54,8 +53,8 @@ const { width } = useElementSize(track)
 const feel = new ScrollFeel(motion.scrollFeel)
 let reduced = false
 let x = 0
-let setX: ((value: number) => void) | null = null
-let setSkew: ((value: number) => void) | null = null
+let lastX = Number.NaN
+let lastSkew = Number.NaN
 
 onMounted(() => {
   reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -70,12 +69,6 @@ useFrame('render', (dt) => {
   if (reduced || !track.value) return
   const half = width.value / 2
   if (!half) return
-  if (!setX || !setSkew) {
-    setX = gsap.quickSetter(track.value, 'x', 'px') as (v: number) => void
-    setSkew = gsap.quickSetter(track.value, 'skewX', 'deg') as (
-      v: number,
-    ) => void
-  }
 
   feel.update(scrollFrame.velocity, dt)
   const speed = Math.max(
@@ -89,7 +82,12 @@ useFrame('render', (dt) => {
   // where the first one left
   x = ((((x - speed * dt) % half) + half) % half) - half
 
-  setX(x)
-  setSkew(feel.drive * config.skew)
+  // Written to hundredths: the band moves every frame, but the skew settles
+  const px = Math.round(x * 100) / 100
+  const skew = Math.round(feel.drive * config.skew * 100) / 100
+  if (px === lastX && skew === lastSkew) return
+  lastX = px
+  lastSkew = skew
+  track.value.style.transform = `translate3d(${px}px, 0, 0) skewX(${skew}deg)`
 })
 </script>

@@ -1,9 +1,9 @@
 import {
+  Color,
+  DataTexture,
   Mesh,
   Vector2,
   PlaneGeometry,
-  TextureLoader,
-  SRGBColorSpace,
   Texture,
   ShaderMaterial,
   DoubleSide,
@@ -13,9 +13,46 @@ import { ScrollFeel } from '~/utils/scrollFeel'
 import { cursorUvIn } from '~/utils/cursorUv'
 import { motion } from '~/motion.config'
 import type { DomPinnedMesh } from './ElementManager'
+import { HALATION_LAYER } from './HalationPass'
 import type { FrameContext } from './FrameContext'
+import { arrivalFor, advance, type Arrival } from './Arrival'
+import {
+  acquireTexture,
+  releaseTexture,
+  textureKeyFor,
+  type TextureEntry,
+} from './TextureCache'
 
 const config = motion.image
+
+type Variant = (typeof config.variants)[keyof typeof config.variants]
+
+/** The rim's colour at each end of the theme: the text colour. */
+const rimLight = new Color(motion.palette.base[0])
+const rimDark = new Color(motion.palette.base[1])
+
+/**
+ * What the sampler reads until the photograph's own texture is attached: a
+ * single transparent pixel. The mesh is invisible until then anyway; this
+ * only keeps the uniform valid.
+ */
+const placeholder = new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1)
+placeholder.needsUpdate = true
+
+/** The treatment named on the element, or none; an unknown name warns. */
+function resolveVariant(name: string | undefined): Variant | null {
+  if (!name) return null
+  const variants: Record<string, Variant | undefined> = config.variants
+  const variant = variants[name]
+  if (!variant && import.meta.dev) {
+    console.warn(
+      `[WavyImage] unknown variant "${name}". Known variants: ${Object.keys(
+        config.variants,
+      ).join(', ')}.`,
+    )
+  }
+  return variant ?? null
+}
 
 /**
  * The uniform set the shaders below declare. Spelling it out keeps the update
@@ -47,20 +84,28 @@ type WavyImageUniforms = {
   uHover: { value: number }
   /** width / height, so the lens under the cursor is round on screen. */
   uAspect: { value: number }
+  /** Cover fit: the share of the texture the plane shows on each axis, and
+   * where that window sits, so a box of any aspect crops the image the way
+   * `object-fit: cover` would instead of stretching it. */
+  uCover: { value: Vector2 }
+  uCoverOffset: { value: Vector2 }
   uLensRadius: { value: number }
   uLensBulge: { value: number }
   uLensZoom: { value: number }
   uHoverAberration: { value: number }
-  /** 0 at rest, 1 on the hardest scroll: how much of the image tears. */
-  uGlitch: { value: number }
   uTime: { value: number }
-  uGlitchSlices: { value: number }
-  uGlitchRate: { value: number }
-  uGlitchShift: { value: number }
-  uGlitchShare: { value: number }
   /** Film grain amplitude in colour units, and its re-roll rate per second. */
   uGrain: { value: number }
   uGrainRate: { value: number }
+  /** The background treatment: greyscale share, transparency, edge dissolve. */
+  uMono: { value: number }
+  /** The hairline inside the edge: its colour (the text colour, by theme),
+   * alpha and width in px. */
+  uRim: { value: Color }
+  uRimAlpha: { value: number }
+  uRimWidth: { value: number }
+  uFade: { value: number }
+  uEdge: { value: number }
 }
 
 const vertexShader = /* glsl */ `
@@ -115,17 +160,20 @@ const fragmentShader = /* glsl */ `
   uniform vec2 uMouse;
   uniform float uHover;
   uniform float uAspect;
+  uniform vec2 uCover;
+  uniform vec2 uCoverOffset;
   uniform float uLensRadius;
   uniform float uLensZoom;
   uniform float uHoverAberration;
-  uniform float uGlitch;
   uniform float uTime;
-  uniform float uGlitchSlices;
-  uniform float uGlitchRate;
-  uniform float uGlitchShift;
-  uniform float uGlitchShare;
   uniform float uGrain;
   uniform float uGrainRate;
+  uniform float uMono;
+  uniform vec3 uRim;
+  uniform float uRimAlpha;
+  uniform float uRimWidth;
+  uniform float uFade;
+  uniform float uEdge;
   varying vec2 vUv;
 
   // Per-pixel hash without a sine, which shows its period on some GPUs
@@ -143,35 +191,50 @@ const fragmentShader = /* glsl */ `
     float lens = exp(-dot(d, d) / (2.0 * uLensRadius * uLensRadius));
     uv = uMouse + (uv - uMouse) * (1.0 - uHover * uLensZoom * lens);
 
-    // Glitch: on a hard scroll some horizontal slices tear sideways. Which
-    // ones and how far is re-rolled a few times a second, so it flickers
-    // rather than slides.
-    float tear = 0.0;
-    if (uGlitch > 0.0) {
-      float frame = floor(uTime * uGlitchRate);
-      float band = floor(uv.y * uGlitchSlices);
-      float on = step(1.0 - uGlitch * uGlitchShare, hash(vec2(band, frame)));
-      tear = on * (hash(vec2(frame, band)) * 2.0 - 1.0) * uGlitchShift * uGlitch;
-      uv.x += tear;
-    }
-
     // Overscan, centred, then slide the crop with the plane's viewport position
     uv = (uv - 0.5) * uZoom + 0.5;
     uv.y += uParallax;
 
+    // Plane UV to texture UV: the window the plane shows of the image, so a
+    // box of another aspect crops rather than stretches
+    uv = uv * uCover + uCoverOffset;
+
     // Chromatic aberration: along the scroll axis with speed, radial under
-    // the lens, and sideways in a torn slice
-    vec2 shift = vec2(tear * 0.4, uAberration) + (uv - uMouse) * lens * uHover * uHoverAberration;
+    // the lens
+    vec2 shift = vec2(0.0, uAberration) + (uv - uMouse) * lens * uHover * uHoverAberration;
     float r = texture2D(uTexture, uv + shift).r;
     float g = texture2D(uTexture, uv).g;
     float b = texture2D(uTexture, uv - shift).b;
     vec3 col = vec3(r, g, b);
 
-    // Film grain, inside the photograph only, re-rolled a few times a second
+    // Film grain, inside the photograph only, re-rolled at the site's slow rate
     float grain = hash(gl_FragCoord.xy + floor(uTime * uGrainRate) * 17.0) - 0.5;
     col += grain * uGrain;
 
-    gl_FragColor = vec4(col, 1.0);
+    // The background treatment: greyscale, and dissolved from a rounded
+    // shape (a superellipse inscribed in the plane, in its own UV) outward,
+    // so the photograph sits into the page rather than on it
+    float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col = mix(col, vec3(luma), uMono);
+    float edge = 1.0;
+    if (uEdge > 0.0) {
+      vec2 q = abs(vUv - 0.5) * 2.0;
+      float rim = pow(pow(q.x, 2.5) + pow(q.y, 2.5), 1.0 / 2.5);
+      edge = 1.0 - smoothstep(1.0 - uEdge, 1.0, rim);
+    }
+
+    // The rim: a hairline just inside the edge, so the plane reads as a
+    // thing with an edge. fwidth gives the size of a pixel in UV, so the
+    // line is the same width on screen whatever the plane's size or tilt.
+    vec2 px = fwidth(vUv);
+    float toEdge = min(
+      min(vUv.x, 1.0 - vUv.x) / px.x,
+      min(vUv.y, 1.0 - vUv.y) / px.y
+    );
+    float rim = 1.0 - smoothstep(uRimWidth - 0.5, uRimWidth + 0.5, toEdge);
+    col = mix(col, uRim, rim * uRimAlpha);
+
+    gl_FragColor = vec4(col, (1.0 - uFade) * edge);
 
     // The texture is decoded to linear on sample (colorSpace = SRGBColorSpace),
     // so the result has to be encoded back to the output space here. This
@@ -196,9 +259,16 @@ const fragmentShader = /* glsl */ `
  * one in the middle each deform differently, and the deformation changes as
  * the image travels up the screen.
  *
- * The `<img>` it follows is invisible, so the mesh is free to deviate from the
- * box by a few tens of pixels; nothing on the page depends on the two agreeing
- * to the pixel.
+ * The `<img>` it follows is a real, visible image: the photograph loads like
+ * on any page, and the mesh takes over from it. The mesh draws nothing until
+ * its texture — made from that very `<img>`, once decoded (TextureCache) — is
+ * attached; then it is drawn, exactly on its box, *under* the img, and over
+ * the next `motion.reveal.image` seconds the img fades out while the rim, the
+ * trail, the lean and the float come in, gated by the same arrival clock. The
+ * `<img>` being invisible from then on is what frees the mesh to deviate from
+ * the box by a few tens of pixels. A `background` treatment has no DOM
+ * version to hand over from, so its img stays hidden and the mesh fades in
+ * from nothing.
  */
 export default class WavyImage
   extends Mesh<PlaneGeometry, ShaderMaterial>
@@ -208,8 +278,18 @@ export default class WavyImage
   dimensions = new Vector2()
   positionOffset = new Vector2()
 
-  imageTexture: Texture
   shaderUniforms: WavyImageUniforms
+
+  /** The cached texture this mesh holds a reference to, once acquired. */
+  private entry: TextureEntry | null = null
+  /** Ready but not yet uploaded and attached: ImageManager takes one a frame. */
+  pendingTexture: TextureEntry | null = null
+  /** The arrival clock, on the element so a rebuild does not replay it. */
+  private arrival: Arrival
+  /** Whether the `<img>` is shown first and faded out over the mesh. */
+  private domFirst: boolean
+  private lastImgOpacity = Number.NaN
+  private readonly onImgLoad = () => this.refreshTexture()
 
   /** Smoothed scroll velocity, drive and energy. */
   private feel = new ScrollFeel(motion.scrollFeel)
@@ -225,15 +305,33 @@ export default class WavyImage
   /** Everything added to the box position this frame besides the trail, so
    * hover testing can account for it. */
   private drift = new Vector2()
+  /** The named treatment the element asked for, if any. */
+  private variant: Variant | null
+  /** How far the mesh hangs back from its box toward the viewport centre
+   * this frame, px: the background variant's parallax. */
+  private hangBack = 0
+  /** width / height of the image file, 0 until it is known. */
+  private imageAspect = 0
+  /** Where the crop sits when the box and the image disagree on aspect, as
+   * fractions: the element's CSS `object-position`, so a card can say
+   * `object-right` and the mesh keeps that side. */
+  private focus = new Vector2(0.5, 0.5)
 
   constructor(imageElement: HTMLImageElement) {
     super(new PlaneGeometry(1, 1, 32, 32), new ShaderMaterial())
     this.imageElement = imageElement
+    this.variant = resolveVariant(imageElement.dataset.variant)
+    this.domFirst = this.variant?.domFirst ?? true
+    this.arrival = arrivalFor(imageElement)
 
-    const { imageTexture, shaderUniforms } = this.buildMaterial()
-    this.imageTexture = imageTexture
-    this.shaderUniforms = shaderUniforms
+    this.shaderUniforms = this.buildMaterial()
+    // A photograph is a source of halation; the light fields are not, and
+    // neither is a treatment that says so (the portrait behind the page)
+    if (this.variant?.halation ?? 1) this.layers.enable(HALATION_LAYER)
+    // Nothing to draw until the texture is attached
+    this.visible = false
     this.resize()
+    this.requestTexture()
   }
 
   /** Reads the `<img>` box: size, and its centre relative to the viewport centre. */
@@ -247,13 +345,49 @@ export default class WavyImage
     )
   }
 
+  /**
+   * Takes the texture for what the `<img>` currently shows, and watches for
+   * the browser choosing another candidate (a resize across a `sizes` step).
+   */
+  private requestTexture() {
+    this.entry = acquireTexture(this.imageElement, (entry) => {
+      if (entry === this.entry) this.pendingTexture = entry
+    })
+    this.imageElement.addEventListener('load', this.onImgLoad)
+  }
+
+  private refreshTexture() {
+    if (!this.entry || textureKeyFor(this.imageElement) === this.entry.key)
+      return
+    const previous = this.entry
+    this.entry = acquireTexture(this.imageElement, (entry) => {
+      if (entry === this.entry) this.pendingTexture = entry
+    })
+    releaseTexture(previous)
+  }
+
+  /** The texture is uploaded: sample it, crop it right, and draw. */
+  attachTexture() {
+    const entry = this.pendingTexture
+    if (!entry) return
+    this.pendingTexture = null
+    this.shaderUniforms.uTexture.value = entry.texture
+    if (entry.width && entry.height)
+      this.imageAspect = entry.width / entry.height
+    this.updateCover()
+    this.visible = true
+  }
+
   private buildMaterial() {
-    const imageTexture = new TextureLoader().load(this.imageElement.src)
-    imageTexture.colorSpace = SRGBColorSpace
+    // The `<img>` may already be decoded, in which case the crop is right
+    // from the first frame rather than from the texture's own load
+    const { naturalWidth, naturalHeight } = this.imageElement
+    if (naturalWidth && naturalHeight)
+      this.imageAspect = naturalWidth / naturalHeight
 
     const { hover, aberration } = config
     const shaderUniforms: WavyImageUniforms = {
-      uTexture: { value: imageTexture },
+      uTexture: { value: placeholder },
       uBend: { value: 0 },
       uScreenCenter: { value: new Vector2() },
       uScreenSize: { value: new Vector2() },
@@ -265,25 +399,39 @@ export default class WavyImage
       uMouse: { value: new Vector2(0.5, 0.5) },
       uHover: { value: 0 },
       uAspect: { value: 1 },
+      uCover: { value: new Vector2(1, 1) },
+      uCoverOffset: { value: new Vector2(0, 0) },
       uLensRadius: { value: hover.lensRadius },
       uLensBulge: { value: hover.lensBulge },
       uLensZoom: { value: hover.lensZoom },
       uHoverAberration: { value: aberration.hover },
-      uGlitch: { value: 0 },
       uTime: { value: 0 },
-      uGlitchSlices: { value: config.glitch.slices },
-      uGlitchRate: { value: config.glitch.rate },
-      uGlitchShift: { value: config.glitch.shift },
-      uGlitchShare: { value: config.glitch.share },
       uGrain: { value: config.grain.amount },
-      uGrainRate: { value: config.grain.rate },
+      uGrainRate: { value: motion.grain.rate },
+      uMono: { value: this.variant?.mono ?? 0 },
+      uRim: { value: new Color(motion.palette.base[1]) },
+      uRimAlpha: { value: 0 },
+      uRimWidth: { value: config.rim.width },
+      // A fading treatment starts fully transparent and comes up to its own
+      // alpha as it arrives
+      uFade: { value: this.domFirst ? 0 : 1 },
+      uEdge: { value: this.variant?.edge ?? 0 },
     }
 
+    // Opaque unless the treatment needs alpha: an opaque photograph occludes
+    // the dust through the depth buffer, a faded one lets it show through.
+    // The arrival needs no alpha of its own: an opaque mesh is drawn whole
+    // under its img, and it is the img that fades.
+    const translucent =
+      (this.variant?.fade ?? 0) > 0 || (this.variant?.edge ?? 0) > 0
     const shaderMaterial = new ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms: shaderUniforms,
-      transparent: false,
+      transparent: translucent,
+      // A translucent one must not write depth either: its dissolved edges
+      // are invisible but would still occlude whatever is drawn after them
+      depthWrite: !translucent,
       side: DoubleSide,
     })
 
@@ -291,7 +439,7 @@ export default class WavyImage
     this.material.dispose()
     this.material = shaderMaterial
 
-    return { imageTexture, shaderUniforms }
+    return shaderUniforms
   }
 
   /**
@@ -300,6 +448,7 @@ export default class WavyImage
    */
   resize() {
     this.measure()
+    this.readFocus()
     this.lag.set(0)
     this.feel.reset()
     this.drift.set(0, 0)
@@ -322,6 +471,46 @@ export default class WavyImage
       this.dimensions.y / halfHeight,
     )
     this.shaderUniforms.uAspect.value = this.dimensions.x / this.dimensions.y
+    this.updateCover()
+  }
+
+  /**
+   * The element's CSS `object-position`, as fractions. Read on resize rather
+   * than per frame: a computed style is not free, and a crop that moved
+   * every frame would be a different feature.
+   */
+  private readFocus() {
+    const [x = NaN, y = NaN] = getComputedStyle(this.imageElement)
+      .objectPosition.split(' ')
+      .map((part) => (part.endsWith('%') ? parseFloat(part) / 100 : NaN))
+    this.focus.set(Number.isFinite(x) ? x : 0.5, Number.isFinite(y) ? y : 0.5)
+  }
+
+  /**
+   * Cover fit: the window of the texture the plane shows. The axis on which
+   * the image is larger than the box is cropped to the box's aspect, and the
+   * crop sits where `object-position` says. Texture v runs bottom-up, so a
+   * focus at the top (y = 0) is the window's top edge at v = 1.
+   */
+  private updateCover() {
+    const { x: width, y: height } = this.dimensions
+    const cover = this.shaderUniforms.uCover.value
+    const offset = this.shaderUniforms.uCoverOffset.value
+    if (!this.imageAspect || !width || !height) {
+      cover.set(1, 1)
+      offset.set(0, 0)
+      return
+    }
+    const plane = width / height
+    if (this.imageAspect > plane) {
+      const share = plane / this.imageAspect
+      cover.set(share, 1)
+      offset.set(this.focus.x * (1 - share), 0)
+    } else {
+      const share = this.imageAspect / plane
+      cover.set(1, share)
+      offset.set(0, (1 - this.focus.y) * (1 - share))
+    }
   }
 
   /**
@@ -340,9 +529,17 @@ export default class WavyImage
       window.innerHeight / 2 -
       this.positionOffset.y -
       height / 2 -
-      (this.lag.value + this.drift.y)
+      (this.lag.value + this.drift.y + this.hangBack)
 
     return cursorUvIn(ctx.pointer, left, top, width, height, cursorScratch)
+  }
+
+  /** The `<img>`'s opacity, written only when it changes. */
+  private setImgOpacity(value: number) {
+    const rounded = Math.round(value * 1000) / 1000
+    if (rounded === this.lastImgOpacity) return
+    this.lastImgOpacity = rounded
+    this.imageElement.style.opacity = rounded >= 1 ? '' : String(rounded)
   }
 
   update(ctx: FrameContext) {
@@ -367,14 +564,39 @@ export default class WavyImage
     this.scale.set(width, height, 1)
     this.updateScreenUniforms()
 
+    // The rim follows the text colour through a theme switch
+    uniforms.uRim.value.copy(rimLight).lerp(rimDark, ctx.theme)
+
+    // Nothing else until the texture is attached and has been drawn once:
+    // the mesh sits on its box (as it is drawn, whole, under the img on that
+    // first frame) and the img is what the visitor sees
+    if (!this.visible) return
+    const arrived =
+      this.arrival.t >= 1
+        ? 1
+        : ctx.rendered
+          ? advance(
+              this.arrival,
+              dt,
+              this.domFirst ? motion.reveal.image : motion.reveal.background,
+              ctx.reduced,
+            )
+          : 0
+    // The handover: the img fades out over the finished mesh (opaque, so the
+    // two never show the page colour between them), the treatment fades in
+    if (this.domFirst) this.setImgOpacity(1 - arrived)
+    else uniforms.uFade.value = 1 - (1 - (this.variant?.fade ?? 0)) * arrived
+    uniforms.uRimAlpha.value =
+      config.rim.alpha * (this.variant?.rim ?? 1) * arrived
+
     if (ctx.reduced) {
+      this.hangBack = 0
       this.position.set(this.positionOffset.x, this.positionOffset.y, 0)
       this.rotation.set(0, 0, 0)
       uniforms.uBend.value = 0
       uniforms.uEnergy.value = 0
       uniforms.uAberration.value = 0
       uniforms.uHover.value = 0
-      uniforms.uGlitch.value = 0
       // A still grain is texture; a moving one is motion
       uniforms.uTime.value = 0
       return
@@ -382,35 +604,61 @@ export default class WavyImage
 
     // Trail: the mesh lags the box in the direction the content is moving.
     // Scrolling down moves content up the screen; the image stays behind, lower.
-    this.lag.target = -config.lag.max * drive
+    // A background image keeps only a share of the motion, and none of the
+    // hover: it is scenery, and scenery that jumps is noise. Everything that
+    // takes the mesh off its box is scaled by the arrival, so the img and the
+    // mesh agree to the pixel while one fades into the other.
+    const keep = (this.variant?.motion ?? 1) * arrived
+    const energyKept = energy * keep
+    this.lag.target = -config.lag.max * drive * keep
     this.lag.update(dt)
 
     // The bubble, on the mesh as a whole: tilt away from the viewport centre
     // and drift outward, both scaled by where the plane sits on screen
     const { bubble } = config
     const screen = uniforms.uScreenCenter.value
-    const bubbleTiltX = -screen.y * bubble.tilt * energy
-    const bubbleTiltY = screen.x * bubble.tilt * energy
-    const spread = screen.x * bubble.spread * energy
+    const bubbleTiltX = -screen.y * bubble.tilt * energyKept
+    const bubbleTiltY = screen.x * bubble.tilt * energyKept
+    const spread = screen.x * bubble.spread * energyKept
+
+    // The lean: on a wide viewport the image turns toward the viewport
+    // centre (yaw about y: the inner edge recedes; roll about z: the top
+    // leans in), by how far from the centre it sits
+    const { lean } = config
+    const wide = Math.min(
+      1,
+      Math.max(0, (window.innerWidth - lean.from) / (lean.to - lean.from)),
+    )
+    const leanScale = (this.variant?.lean ?? 1) * arrived
+    const leanY = -screen.x * lean.yaw * wide * leanScale
+    const leanZ = screen.x * lean.roll * wide * leanScale
+
+    // A background image hangs back toward the viewport centre by a share
+    // of its distance from it, so it moves slower than the page over it
+    this.hangBack =
+      -this.positionOffset.y * (this.variant?.parallax ?? 0) * arrived
 
     // Idle drift
     const { float } = config
     this.drift.set(
-      Math.cos(time * float.speed * 0.8 + this.phase) * float.amplitude * 0.6 +
+      Math.cos(time * float.speed * 0.8 + this.phase) *
+        float.amplitude *
+        keep *
+        0.6 +
         spread,
-      Math.sin(time * float.speed + this.phase) * float.amplitude,
+      Math.sin(time * float.speed + this.phase) * float.amplitude * keep,
     )
 
     // Cursor
     const { hover } = config
-    const cursor = this.cursorUv(ctx)
-    this.hover.target = cursor ? 1 : 0
+    const cursor = (this.variant?.hover ?? 1) > 0 ? this.cursorUv(ctx) : null
+    this.hover.target = cursor ? arrived : 0
     if (cursor) {
       this.cursorX.target = cursor.x
       this.cursorY.target = cursor.y
       // Tilt toward the cursor: the side under it comes toward the viewer
-      this.tiltX.target = (cursor.y - 0.5) * 2 * hover.tilt
-      this.tiltY.target = -(cursor.x - 0.5) * 2 * hover.tilt
+      this.tiltX.target = (cursor.y - 0.5) * 2 * hover.tilt * arrived
+      this.tiltY.target = -(cursor.x - 0.5) * 2 * hover.tilt * arrived
     } else {
       // The lens fades out where it was rather than sliding back to the centre
       this.tiltX.target = 0
@@ -426,42 +674,48 @@ export default class WavyImage
 
     // Depth: lift toward the camera under the cursor, recede while scrolling
     // fast (the bubble adds its own per-vertex depth in the shader)
-    const depth = hoverAmount * hover.lift - config.recede * Math.abs(drive)
+    const depth =
+      hoverAmount * hover.lift - config.recede * Math.abs(drive) * keep
 
     this.position.set(
       this.positionOffset.x + this.drift.x,
-      this.positionOffset.y + this.lag.value + this.drift.y,
+      this.positionOffset.y + this.lag.value + this.drift.y + this.hangBack,
       depth,
     )
     this.rotation.set(
       this.tiltX.value + bubbleTiltX,
-      this.tiltY.value + bubbleTiltY,
-      0,
+      this.tiltY.value + bubbleTiltY + leanY,
+      leanZ,
     )
 
     uniforms.uBend.value = (this.lag.value * config.bend) / height
-    uniforms.uEnergy.value = energy
-    uniforms.uAberration.value = config.aberration.scroll * drive
+    uniforms.uEnergy.value = energyKept
+    uniforms.uAberration.value = config.aberration.scroll * drive * keep
     uniforms.uHover.value = hoverAmount
     uniforms.uMouse.value.set(this.cursorX.value, this.cursorY.value)
 
-    // The glitch only exists past a hard scroll: nothing at a gentle glide,
-    // ramping up between the two thresholds
-    const { glitch } = config
-    const speed = Math.abs(drive)
-    const ramp = Math.min(
-      1,
-      Math.max(0, (speed - glitch.start) / (glitch.full - glitch.start)),
-    )
-    uniforms.uGlitch.value = ramp * ramp * (3 - 2 * ramp)
     uniforms.uTime.value = time
   }
 
-  /** Dispose the mesh geometry, material and texture. */
+  /** Shows the `<img>` again: the scene is going away. */
+  restoreDom() {
+    if (!this.domFirst) return
+    this.lastImgOpacity = Number.NaN
+    this.imageElement.style.opacity = ''
+  }
+
+  /**
+   * Dispose the mesh geometry and material, and give the texture back to the
+   * cache — never dispose it: the next build of this same image (a rebuild
+   * happens on every registration burst) takes it again without an upload.
+   */
   dispose() {
+    this.imageElement.removeEventListener('load', this.onImgLoad)
+    if (this.entry) releaseTexture(this.entry)
+    this.entry = null
+    this.pendingTexture = null
     this.geometry.dispose()
     this.material.dispose()
-    this.imageTexture.dispose()
   }
 }
 

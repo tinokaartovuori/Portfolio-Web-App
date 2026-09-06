@@ -28,8 +28,19 @@
         veilOn ? 'bar-veil-on' : '',
       ]"
     ></div>
+    <!--
+      A deeper wash for when the top bar has a menu open over the page: solid
+      to below the open stack, then feathered. Its own layer, faded in and
+      out, because a mask cannot be transitioned.
+    -->
+    <div
+      v-if="edge === 'top'"
+      aria-hidden="true"
+      class="bar-veil bar-shade absolute inset-x-0 top-[calc(-1_*_var(--bar-offset))]"
+      :class="shade && pastHero ? 'bar-veil-on' : ''"
+    ></div>
     <div class="relative flex w-full justify-center">
-      <div class="flex w-[75%] items-center justify-end xs:w-[85%]">
+      <div class="flex w-full items-center justify-end px-(--bar-offset)">
         <slot></slot>
       </div>
     </div>
@@ -37,10 +48,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, provide } from 'vue'
 import { useElementBounding, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
+import { BAR_PAST_HERO } from '~/composables/useBar'
+
+const emit = defineEmits<{
+  /** Whether the bar has left the hero; TopBar folds its controls on it. */
+  pastHero: [value: boolean]
+}>()
 
 const props = withDefaults(
   defineProps<{
@@ -53,11 +70,14 @@ const props = withDefaults(
      * more room. Top bars only.
      */
     compact?: boolean
+    /** Deepen the veil to cover an open menu. Top bars only, past the hero. */
+    shade?: boolean
   }>(),
   {
     edge: 'top',
     veil: true,
     compact: false,
+    shade: false,
   },
 )
 
@@ -87,18 +107,28 @@ const overHero = computed(() => {
 })
 
 /*
- * Off until mounted, on the server and through hydration alike: the layout
- * renders the bars before the page's setup has said whether it has a hero,
- * and a server-rendered "on" would be left in place by hydration (class
- * mismatches are check-only) until the next re-render. Pages without a hero
- * get a short fade-in instead, which reads as intended.
+ * On a page with a hero: off until mounted, on the server and through
+ * hydration alike. The layout renders the bars before the page's setup has
+ * said how tall its hero is, and a server-rendered "on" would be left in
+ * place by hydration (class mismatches are check-only) until the next
+ * re-render. A page without a hero says so in its route meta
+ * (`definePageMeta({ hero: false })`), which the server knows too, so there
+ * the veil and the compact bar are in the first paint instead of fading in.
  */
 const mounted = ref(false)
 onMounted(() => {
   mounted.value = true
 })
+const route = useRoute()
+const heroPage = computed(() => route.meta.hero !== false)
 
-const pastHero = computed(() => mounted.value && !overHero.value)
+const pastHero = computed(
+  () => !heroPage.value || (mounted.value && !overHero.value),
+)
+// The controls inside may care too (the heart takes its colour from it), and
+// so may the parent (TopBar folds its stack into a menu button on a phone)
+provide(BAR_PAST_HERO, pastHero)
+watch(pastHero, (value) => emit('pastHero', value), { immediate: true })
 const veilOn = computed(() => props.veil && pastHero.value)
 const compactOn = computed(
   () => props.compact && props.edge === 'top' && pastHero.value,

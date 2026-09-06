@@ -29,10 +29,9 @@ export default defineContentConfig({
           eyebrow: z.string(),
           heading: z.string(),
         }),
-        /** The about teaser after the work; its text is about.md's standfirst. */
+        /** The about section after the work; its text is about.md's. */
         about: z.object({
           eyebrow: z.string(),
-          link: z.string(),
         }),
         /** The footer, rendered on every page. */
         contact: z.object({
@@ -48,7 +47,13 @@ export default defineContentConfig({
 
     /**
      * One file per project. `order` drives the sequence on the home page;
-     * `image` is a path under public/.
+     * `image` is a path under public/. `website` is the project's own site,
+     * shown beside the rating; `links` are shown on the line under it (a
+     * store page, a repository, a video), each with an optional icon, a
+     * language flag and a place on the card; `gallery` is a set of
+     * further images after the body, each a ThreeImage like the lead one, so
+     * they get the same treatment. A `wide` item spans two columns;
+     * `galleryColumns: 3` shows them small.
      */
     projects: defineCollection({
       type: 'page',
@@ -61,18 +66,88 @@ export default defineContentConfig({
         year: z.string(),
         role: z.string(),
         order: z.number(),
-        link: z.string().optional(),
+        /** Which schema.org type the project page's JSON-LD describes it as,
+         * so a rated app, a game and a film each get the right rich result.
+         * Defaults to a plain CreativeWork. */
+        schemaType: z
+          .enum([
+            'SoftwareApplication',
+            'VideoObject',
+            'VideoGame',
+            'CreativeWork',
+          ])
+          .optional(),
+        /** The work's own date, ISO (yyyy-mm-dd), where the year is not
+         * enough — a VideoObject's uploadDate, an app's datePublished. */
+        date: z.string().optional(),
+        /** A video's running time, ISO 8601 duration (e.g. PT2H). */
+        duration: z.string().optional(),
+        /** The application category / game platform, where the type wants one. */
+        operatingSystem: z.string().optional(),
+        /** A separate image for the home page card, for when the cover crop
+         * of `image` is not the right picture (a screenshot with a side panel,
+         * say). The project page always shows `image`. */
+        card: z.string().optional(),
+        /** Where the card's crop sits when its image is not 16:9, as CSS
+         * `object-position` ('50% 50%' is the centre). */
+        imagePosition: z.string().optional(),
+        /** The project's own site, labelled with its host. */
+        website: z.string().optional(),
+        /** A link carries an optional mark: `icon` names where it goes
+         * (`youtube`, `game`), `lang` the language of what is there as a BCP 47 tag
+         * (`fi` draws the Finnish flag, and the anchor gets `hreflang`).
+         * `card: true` shows it on the home page card too, beside "Read
+         * more" — for the one link that is the work itself, a film say. */
+        links: z
+          .array(
+            z.object({
+              label: z.string(),
+              to: z.string(),
+              /** A shorter label for a phone, where the card's row is tight. */
+              short: z.string().optional(),
+              icon: z.enum(['youtube', 'game']).optional(),
+              lang: z.enum(['fi']).optional(),
+              card: z.boolean().optional(),
+            }),
+          )
+          .optional(),
+        /** A store rating out of five, shown on the card and beside the
+         * links on the project page: the score as written and where it is
+         * from — one store, or a list when the stores agree. */
+        rating: z
+          .object({
+            value: z.string(),
+            source: z.union([z.string(), z.array(z.string())]).optional(),
+          })
+          .optional(),
+        galleryTitle: z.string().optional(),
+        /** How many columns the gallery has from `md` up: 2 (the default,
+         * one column on a phone) for photographs, 3 (two on a phone) for
+         * stills and other things meant to be seen small. */
+        galleryColumns: z.union([z.literal(2), z.literal(3)]).optional(),
+        gallery: z
+          .array(
+            z.object({
+              image: z.string(),
+              imageAlt: z.string(),
+              wide: z.boolean().optional(),
+            }),
+          )
+          .optional(),
       }),
     }),
 
-    /** The about page: frontmatter for the standfirst, markdown body for prose. */
+    /**
+     * The about section of the home page: frontmatter for the standfirst
+     * and the portrait (a path under public/), markdown body for the prose.
+     */
     about: defineCollection({
       type: 'page',
       source: 'about.md',
       schema: z.object({
-        title: z.string(),
-        description: z.string(),
         standfirst: z.string(),
+        image: z.string(),
+        imageAlt: z.string(),
       }),
     }),
   },

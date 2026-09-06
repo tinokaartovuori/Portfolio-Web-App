@@ -1,5 +1,4 @@
 import { onMounted, type Ref } from 'vue'
-import { gsap } from 'gsap'
 import { onFrame, useFrame } from '~/composables/useFrameLoop'
 import { scrollFrame } from '~/composables/useSmoothScroll'
 import { Spring } from '~/utils/spring'
@@ -43,7 +42,6 @@ function start() {
  */
 export function useTrail(target: Ref<HTMLElement | null>, share = 1) {
   let element: HTMLElement | null = null
-  let setY: ((value: number) => void) | null = null
   let last = Number.NaN
 
   onMounted(start)
@@ -53,11 +51,11 @@ export function useTrail(target: Ref<HTMLElement | null>, share = 1) {
     if (!node) return
     if (node !== element) {
       element = node
-      setY = gsap.quickSetter(node, 'y', 'px') as (value: number) => void
+      last = Number.NaN
     }
     const y = Math.round(trailFrame.y * share * 10) / 10
     if (y === last) return
     last = y
-    setY!(y)
+    node.style.transform = `translate3d(0, ${y}px, 0)`
   })
 }

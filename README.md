@@ -15,9 +15,9 @@ This project is built using the following technologies:
 
 ## Commands
 
-- `npm run build`: Builds the project for production
+- `npm run build`: Builds the project for production (prerendered pages plus the small server that runs the like counter and the visit log)
 - `npm run dev`: Runs the project in development mode with hot-reloading enabled
-- `npm run generate`: Generates a static version of the site for deployment
+- `npm run generate`: Generates a static version of the site (pages only; the likes and the visit log need the server)
 - `npm run preview`: Runs the project in development mode and opens it in a browser
 - `npm run postinstall`: Runs automatically after installation to prepare the project for development
 - `npm run format`: Runs Prettier and formats all project files to correct style
@@ -28,6 +28,15 @@ To run this project locally, clone the repository and install the dependencies b
 `npm install`
 
 Then you can use the commands listed above to run the project in development mode or build it for production.
+
+## Deployment
+
+The site runs as one Node process behind Caddy, on a DigitalOcean Droplet, with Docker Compose:
+
+1. Copy `.env.example` to `.env` and fill in `DOMAIN` (the site's address, Caddy gets the certificate for it) and `NUXT_STATS_KEY` (a long random string).
+2. `docker compose up -d --build`
+
+The like count and the visit log are one SQLite file in the `data` volume, which survives rebuilds. The numbers are at `https://<domain>/api/stats?key=<NUXT_STATS_KEY>` (add `&days=90` for a longer window).
 
 ## Progress so far
 

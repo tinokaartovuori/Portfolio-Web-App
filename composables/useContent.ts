@@ -4,7 +4,8 @@
  * `useAsyncData` shares one payload per key, but warns when two callers hand
  * it different handler functions for the same key — the home page and the
  * footer both want `home`, the home page and the about page both want
- * `about`. Going through these keeps the handler one and the same.
+ * `about`, the home page and every project page want `projects`. Going
+ * through these keeps the handler one and the same.
  */
 export function useHomeContent() {
   return useAsyncData('home', () => queryCollection('home').first())
@@ -12,4 +13,11 @@ export function useHomeContent() {
 
 export function useAboutContent() {
   return useAsyncData('about', () => queryCollection('about').first())
+}
+
+/** Every project in home page order: the cards, and a project page's "next". */
+export function useProjects() {
+  return useAsyncData('projects', () =>
+    queryCollection('projects').order('order', 'ASC').all(),
+  )
 }

@@ -1,16 +1,13 @@
 <template>
   <transition name="fade">
-    <div v-show="showComponent" class="flex">
+    <div v-show="showComponent" class="flex items-baseline">
       <WaveText
         text="Scroll to discover"
-        class="text-sm font-light text-onyx dark:text-platinum xs:text-base sm:text-xl md:text-2xl"
+        class="text-lg font-light text-onyx sm:text-xl md:text-2xl dark:text-platinum"
       />
-      <div
-        aria-hidden="true"
-        class="up-and-down px-2 text-sm font-light text-onyx dark:text-platinum xs:text-base sm:text-xl md:text-2xl"
-      >
-        ↓
-      </div>
+      <BobbingArrow
+        class="px-2 text-lg font-light text-onyx sm:text-xl md:text-2xl dark:text-platinum"
+      />
     </div>
   </transition>
 </template>
@@ -27,26 +24,9 @@ withDefaults(
 </script>
 
 <style scoped>
-.up-and-down {
-  animation: MoveUpDown 2s ease-out infinite;
-  position: relative;
-  left: 0;
-  bottom: 0;
-}
-
-@keyframes MoveUpDown {
-  0%,
-  100% {
-    transform: translateY(-3px);
-  }
-  50% {
-    transform: translateY(3px);
-  }
-}
-
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s;
+  transition: opacity 0.35s;
 }
 
 .fade-enter-from /* .fade-enter in < 2.1.8 */ {
@@ -57,12 +37,7 @@ withDefaults(
   opacity: 0;
 }
 
-/* The arrow bobs forever, so it is exactly what this preference is about. */
 @media (prefers-reduced-motion: reduce) {
-  .up-and-down {
-    animation: none;
-  }
-
   .fade-enter-active,
   .fade-leave-active {
     transition-duration: 1ms;

@@ -10,7 +10,6 @@ import {
 } from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import type { Pass } from 'three/addons/postprocessing/Pass.js'
 
 /**
@@ -77,11 +76,14 @@ export default class Scenario {
   }
 
   /**
-   * Routes drawing through an EffectComposer: RenderPass, then `passes`, then
-   * an OutputPass that applies tone mapping and encodes to sRGB. Off until a
-   * pass needs it — bloom, blur, a glass refraction pass — because it costs a
-   * full-screen render target per frame. The target is multisampled so the
-   * canvas' own antialiasing is not lost on the way.
+   * Routes drawing through an EffectComposer: RenderPass, then `passes`. There
+   * is no OutputPass, on purpose: the last of `passes` has to encode for the
+   * screen itself, because the canvas is transparent and the target is
+   * premultiplied, which OutputPass would encode as if it were not (see
+   * HalationPass). Tone mapping, when it comes, goes in that last pass too.
+   * It costs a full-screen render target per frame, so it is only on because
+   * a pass needs it. The target is multisampled so the canvas' own
+   * antialiasing is not lost on the way.
    */
   enablePostProcessing(passes: Pass[] = []) {
     this.disablePostProcessing()
@@ -92,7 +94,6 @@ export default class Scenario {
     const composer = new EffectComposer(this.renderer, target)
     composer.addPass(new RenderPass(this.scene, this.camera))
     for (const pass of passes) composer.addPass(pass)
-    composer.addPass(new OutputPass())
     composer.setPixelRatio(this.renderer.getPixelRatio())
     composer.setSize(this.width, this.height)
     this.composer = composer

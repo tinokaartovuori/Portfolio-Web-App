@@ -25,7 +25,7 @@
       :class="flip ? 'origin-right' : 'origin-left'"
     ></span>
     <span
-      class="font-mono text-xs tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
+      class="font-mono text-sm tracking-[0.14em] text-onyx/45 dark:text-platinum/45"
     >
       {{ String(index + 1).padStart(2, '0') }}
     </span>
@@ -34,7 +34,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { gsap } from 'gsap'
 import { useFrame, damp } from '~/composables/useFrameLoop'
 import { useTrail } from '~/composables/useTrail'
 import { motion } from '~/motion.config'
@@ -60,19 +59,29 @@ const rule = ref<HTMLElement | null>(null)
 useTrail(row, motion.trail.index)
 
 let reduced = false
-let setScale: ((value: number) => void) | null = null
 let progress = 0
 let lastScale = -1
+let first = true
+/*
+ * The server draws every rule at full width. A row already inside the
+ * viewport at the first frame keeps it that way — collapsing it to redraw
+ * it would be an entry animation the page does not want — until the row has
+ * left below the viewport, after which it draws in as it enters like the rest.
+ */
+let latched = false
 
 onMounted(() => {
   reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 })
 
+const write = (scale: number) => {
+  if (scale === lastScale) return
+  lastScale = scale
+  rule.value!.style.transform = `scaleX(${scale})`
+}
+
 useFrame('render', (dt) => {
   if (reduced || !row.value || !rule.value) return
-  if (!setScale) {
-    setScale = gsap.quickSetter(rule.value, 'scaleX') as (v: number) => void
-  }
 
   // Measure the row, not the rule: a rect includes the element's own
   // transform, and the rule's is exactly what is being set here
@@ -83,12 +92,23 @@ useFrame('render', (dt) => {
     1,
     Math.max(0, (viewport - rect.top) / (viewport * config.drawSpan)),
   )
-  progress = damp(progress, target, config.drawSmoothing, dt)
-  const scale = Math.abs(progress - target) < 0.001 ? target : progress
-  if (scale !== lastScale) {
-    lastScale = scale
-    setScale(scale)
+
+  if (first) {
+    first = false
+    progress = target
+    latched = rect.top < viewport
   }
+  if (latched) {
+    if (rect.top < viewport) {
+      write(1)
+      return
+    }
+    latched = false
+    progress = target
+  }
+
+  progress = damp(progress, target, config.drawSmoothing, dt)
+  write(Math.abs(progress - target) < 0.001 ? target : progress)
 })
 </script>
 

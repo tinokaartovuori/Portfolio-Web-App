@@ -1,28 +1,22 @@
-# Dockerfile
-FROM node:14-alpine
-
-# create destination directory
-RUN mkdir -p /app
+# Builds the site and runs the small Nitro server that serves the prerendered
+# pages and the API (likes, visit log). The SQLite file lives in /data; mount
+# a volume there so it outlives the container.
+FROM node:22.13-alpine AS build
 WORKDIR /app
-
-# update and install dependency
-RUN apk update && apk upgrade
-RUN apk add git
-
-COPY ./package*.json /app/
-
-RUN npm install && npm cache clean --force
-
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
+RUN npm run build
 
-ENV PATH ./node_modules/.bin/:$PATH
-
+FROM node:22.13-alpine
+WORKDIR /app
+ENV NODE_ENV=production \
+    NITRO_HOST=0.0.0.0 \
+    NITRO_PORT=3000 \
+    NUXT_DATA_DIR=/data
+COPY --from=build /app/.output ./.output
+RUN mkdir -p /data && chown node:node /data /app
+USER node
+VOLUME /data
 EXPOSE 3000
-# We need to expose 24678 for the hot reload to work
-EXPOSE 24678
-
-ENV NUXT_HOST=0.0.0.0
-ENV NUXT_PORT=3000
-
-# Start the app
-CMD [ "npm", "run", "dev" ]
+CMD ["node", ".output/server/index.mjs"]

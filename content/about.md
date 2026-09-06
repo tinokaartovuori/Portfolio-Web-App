@@ -1,24 +1,25 @@
 ---
-# Sample copy — replace with your own.
-title: About
-description: Tino Kaartovuori is a developer working on interactive and motion-heavy interfaces.
-standfirst: I am a developer in Finland working on interfaces that move — mostly WebGL, shaders and scroll design, usually somewhere between engineering and art direction.
+# The portrait is a path under public/.
+standfirst: I am an engineer in Finland. I build software and hardware, and I rebuild old ways of working with AI and modern tools.
+image: /images/portrait.jpg
+imageAlt: Tino Kaartovuori, smiling, in low evening light
 ---
 
-I started out in backend work and drifted toward the browser once it became
-clear that the interesting constraints were all on the client: a frame budget of
-sixteen milliseconds, a GPU you cannot profile properly, and a user who notices
-a dropped frame long before they notice a slow query.
+I want to see the whole of a system, find where cause turns into effect, and
+then find a better way to run it. Most days that is software: web apps in
+TypeScript on React, Next.js and Nuxt, backends on Node and PostgreSQL,
+desktop apps in Electron. The rest is whatever the problem needs, whether a
+camera, a CAD model or a soldering iron.
 
-Most of what I build sits behind the DOM rather than replacing it. Real HTML
-stays the source of truth for layout, accessibility and search, and the WebGL
-layer reads its geometry from that. It means a page still works with the canvas
-switched off, and it means the type is real type.
+What interests me most now is what AI does to a process. A pricing routine
+that took a person an afternoon, a supplier catalogue keyed into the ERP by
+hand, a workflow nobody has questioned in ten years: I take these apart and
+rebuild them with agents, automation and the tools of the moment. I work with
+Claude Code every day, and this site was built that way too.
 
-Outside of that I do a lot of reading about colour, and a moderate amount of
-complaining about colour management.
+### What I offer
 
-## Currently
-
-Open to selected freelance work, particularly anything involving motion systems
-or a render pipeline that has stopped being fun for the team that owns it.
+- Process renewal with AI: old routines rebuilt with agents, automation and modern tools
+- Web apps and software for web, desktop and mobile, designed and built end to end
+- ERP, data and AI integrations
+- Photography and video

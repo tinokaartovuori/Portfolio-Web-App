@@ -1,45 +1,51 @@
-# Sample copy — replace with your own. Everything here is rendered as real DOM,
-# which is what the WebGL layer measures and pins its meshes to.
+# Everything here is rendered as real DOM, which is what the WebGL layer
+# measures and pins its meshes to.
 title: Portfolio
 description: >-
-  Tino Kaartovuori builds interactive, motion-driven experiences for the
-  browser — WebGL, custom shaders and scroll design.
+  Tino Kaartovuori is an engineer in Finland who designs and builds web apps,
+  software and hardware, and works with AI as a daily tool.
 
 hero:
-  lead: I build things for the browser that move the way you expect them to.
-  accent: Interaction, motion and WebGL.
+  lead: An engineer who builds software, and everything around it.
+  accent: Web, AI, hardware, and an eye for design.
   cta:
     label: See the work
     to: '#work'
 
 # The running band between the hero and the work. Short phrases; they repeat.
 marquee:
-  - WebGL
-  - Shaders
-  - Scroll design
-  - Motion systems
-  - Nuxt
+  - Claude Code
   - Three.js
-  - Creative frontend
+  - WebGL
+  - MCP
+  - Nuxt
+  - Next.js
+  - Phaser
+  - AlphaZero
+  - Electron
+  - STM32
+  - Fusion 360
+  - 3D printing
+  - Home Assistant
+  - DaVinci Resolve
 
 work:
   eyebrow: Selected work
-  heading: Four projects, and how they were built.
+  heading: Things I have designed and built, on screens and off them.
 
-# The short about block after the work; the text itself is about.md's standfirst
+# The about section after the work; the text and the portrait are about.md's
 about:
   eyebrow: About
-  link: More about me
 
 # The footer, on every page
 contact:
   eyebrow: Contact
-  heading: Let's make something that moves.
-  email: hello@example.com
+  heading: Let's build something that works.
+  email: contact@kaartovuori.fi
   name: Tino Kaartovuori
   links:
     - label: GitHub
-      to: https://github.com/
+      to: https://github.com/tinokaartovuori
     - label: LinkedIn
       to: https://www.linkedin.com/
   backToTop: Back to top

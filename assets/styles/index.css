@@ -44,17 +44,62 @@ body {
 }
 
 /*
+ * Nothing may widen the page. An element reaching past the right edge widens
+ * the layout viewport on a phone (Chrome's device mode included), and the
+ * page is then shown zoomed out a few percent with the canvas measured
+ * against the wider width: everything a little off its place. This rule only
+ * stops the desktop from scrolling sideways; the phone's layout viewport
+ * follows the content whatever the root's overflow says, so an overflow has
+ * to be clipped where it happens (the about section clips its portrait's
+ * wash). `clip` rather than `hidden`, so the root is not made a scroll
+ * container and nothing about scrolling changes.
+ */
+html {
+  overflow-x: clip;
+}
+
+/*
+ * The page's side gutter: every section, the bars and the footer keep their
+ * text inside it, so the name in the top bar, the hero's first line and the
+ * work below share one left edge. On a phone it is at least 2.75rem, which
+ * keeps the text well inside the hero plate (drawn 20px inside its box).
+ */
+:root {
+  --page-gutter: max(2.75rem, 8vw);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --page-gutter: 10vw;
+  }
+}
+
+/*
  * The fixed bars' geometry, in one place: their offset from the viewport edge
  * and the height of what they hold (a 2xl line, the theme switch). Bar.vue
  * positions itself from these, and the hero pads itself past `--bar-safe` so
  * its text can never sit under a bar, whatever the viewport.
  */
 :root {
-  --bar-offset: 2rem;
+  /* The same distance from the edge as the page gutter (below), so the
+   * name sits as far from the top of the hero plate as from its side */
+  --bar-offset: 2.75rem;
   /* Where the top bar sits once the page is scrolled: closer to the edge */
   --bar-offset-compact: 1rem;
   --bar-height: 2rem;
-  --bar-safe: calc(var(--bar-offset) + var(--bar-height));
+  /* The top bar's own height: a row, or on a portrait phone the stack of
+   * its controls (TopBar.vue), which the hero and the anchors clear */
+  --top-bar-height: var(--bar-height);
+  --bar-safe: calc(var(--bar-offset) + var(--top-bar-height));
+  --bar-safe-bottom: calc(var(--bar-offset) + var(--bar-height));
+}
+
+@media (max-width: 639px) and (orientation: portrait) {
+  :root {
+    /* The switch (24px) and its 12px extra, the heart (23px) and its 4px,
+     * two lines of text (28px each), three 12px gaps: 155px */
+    --top-bar-height: 9.75rem;
+  }
 }
 
 @media (min-width: 640px) {
@@ -97,10 +142,15 @@ body {
  * gradient background, so the global 600ms colour transition carries it
  * through a theme switch like everything else. Bar.vue fades it in with
  * `.bar-veil-on` once the bar is no longer over the hero.
+ *
+ * Its height is a row of the bar, not `--bar-safe`: the veil is only on past
+ * the hero, and there a portrait phone's stack is folded into the menu
+ * button, one row high. Sized from the open stack it reached 280px down a
+ * phone with nothing under it. The open menu has the shade below.
  */
 .bar-veil {
   background-color: #dde0ed;
-  height: calc(var(--bar-safe) + 5rem);
+  height: calc(var(--bar-offset) + var(--bar-height) + 5rem);
   opacity: 0;
   mask-image: linear-gradient(
     to bottom,
@@ -116,12 +166,28 @@ body {
 }
 
 .bar-veil-bottom {
+  height: calc(var(--bar-safe-bottom) + 5rem);
   mask-image: linear-gradient(
     to top,
     rgb(0 0 0 / 0.95) 0%,
     rgb(0 0 0 / 0.8) 35%,
     rgb(0 0 0 / 0.45) 60%,
     rgb(0 0 0 / 0.12) 85%,
+    transparent 100%
+  );
+}
+
+/* Under an open menu (TopBar on a portrait phone): solid past the stack,
+ * then the same long feather, so the fanned-out controls sit on the page
+ * colour and nothing reads through them. */
+.bar-shade {
+  height: calc(var(--bar-safe) + 10rem);
+  mask-image: linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 1) 0%,
+    rgb(0 0 0 / 1) 65%,
+    rgb(0 0 0 / 0.6) 80%,
+    rgb(0 0 0 / 0.2) 92%,
     transparent 100%
   );
 }
@@ -168,6 +234,20 @@ html {
 
 html.dark {
   background-color: #0c0d12;
+}
+
+/*
+ * A light field's plate, painted by the page itself from the first frame in
+ * exactly the colour the shader starts from (utils/plate.ts computes it, the
+ * element carries the two as custom properties). The WebGL plate is drawn
+ * under it in the same colour and then hides it; where WebGL never comes,
+ * this is the plate. The global colour transition carries a theme switch.
+ */
+.plate {
+  background-color: var(--plate-light);
+}
+html.dark .plate {
+  background-color: var(--plate-dark);
 }
 
 html * {

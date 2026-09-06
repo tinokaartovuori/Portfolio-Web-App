@@ -1,5 +1,4 @@
 import { onMounted, type Ref } from 'vue'
-import { gsap } from 'gsap'
 import { useFrame } from '~/composables/useFrameLoop'
 import { pointerFrame } from '~/composables/usePointer'
 import { Spring } from '~/utils/spring'
@@ -33,9 +32,20 @@ export function useMagnetic(
 
   let enabled = false
   let element: HTMLElement | null = null
-  let setX: ((value: number) => void) | null = null
-  let setY: ((value: number) => void) | null = null
   let atRest = true
+  let lastX = Number.NaN
+  let lastY = Number.NaN
+
+  const write = (el: HTMLElement, x: number, y: number) => {
+    // Hundredths of a px: finer than anything a screen shows, coarse enough
+    // that a settling spring stops writing before it stops moving
+    const rx = Math.round(x * 100) / 100
+    const ry = Math.round(y * 100) / 100
+    if (rx === lastX && ry === lastY) return
+    lastX = rx
+    lastY = ry
+    el.style.transform = `translate3d(${rx}px, ${ry}px, 0)`
+  }
 
   onMounted(() => {
     const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches
@@ -51,8 +61,8 @@ export function useMagnetic(
     if (!el) return
     if (el !== element) {
       element = el
-      setX = gsap.quickSetter(el, 'x', 'px') as (value: number) => void
-      setY = gsap.quickSetter(el, 'y', 'px') as (value: number) => void
+      lastX = Number.NaN
+      lastY = Number.NaN
     }
 
     let pullX = 0
@@ -80,8 +90,7 @@ export function useMagnetic(
     if (pullX === 0 && pullY === 0 && springX.settled && springY.settled) {
       if (!atRest) {
         atRest = true
-        setX!(0)
-        setY!(0)
+        write(el, 0, 0)
       }
       return
     }
@@ -89,7 +98,6 @@ export function useMagnetic(
     atRest = false
     springX.update(dt)
     springY.update(dt)
-    setX!(springX.value)
-    setY!(springY.value)
+    write(el, springX.value, springY.value)
   })
 }

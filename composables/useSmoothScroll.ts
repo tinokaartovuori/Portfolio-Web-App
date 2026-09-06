@@ -38,6 +38,18 @@ export interface SmoothScroll {
   destroy: () => void
 }
 
+let activeGlide: ((position: number) => void) | null = null
+
+/**
+ * Moves the page to `position` through the scroll spring, the way a key or
+ * an anchor does — for the scroll track. A plain jump before the integrator
+ * exists or under reduced motion, where the spring is bypassed.
+ */
+export function glideTo(position: number) {
+  if (activeGlide) activeGlide(position)
+  else window.scrollTo(0, Math.max(0, position))
+}
+
 const EDGE_EPSILON = 0.5
 
 /**
@@ -202,7 +214,14 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
   const stopFrame = onFrame('scroll', (dt, time) => {
     lenis.raf(time * 1000)
 
-    const max = lenis.limit
+    // Lenis learns a new document height from a ResizeObserver, a frame or
+    // two after a navigation; the router has scrolled to the hash by then,
+    // and clamping to the old page's limit would haul it back up. The
+    // document's own number is never stale.
+    const max = Math.max(
+      lenis.limit,
+      document.documentElement.scrollHeight - window.innerHeight,
+    )
     const actual = lenis.actualScroll
     let y: number
 
@@ -210,8 +229,18 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       y = actual
     } else {
       // Something else moved the page (a finger, the scrollbar, a restored
-      // position, find-in-page): take it as the new truth and stop chasing
-      if (Math.abs(actual - lastWritten) > EXTERNAL_SCROLL_EPSILON) {
+      // position, find-in-page): take it as the new truth and stop chasing.
+      // Faster than any flick it is a jump, not motion — a navigation lands
+      // the new page at the old position clamped to its height on one frame
+      // and at the top on the next — and nothing on screen travelled from
+      // there to here, so it leaves no velocity: read as motion, a jump
+      // saturated every scroll-driven effect at once and the page arrived
+      // with its images bent and trailing.
+      const moved = actual - lastWritten
+      if (Math.abs(moved) > EXTERNAL_SCROLL_EPSILON) {
+        if (Math.abs(moved) > overscrollConfig.bounceMaxVelocity * dt) {
+          previousY = actual
+        }
         scroll.set(actual)
         target = actual
         lastWritten = actual
@@ -331,6 +360,9 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
   const scrollTo = (position: number) => {
     target = clamp(position, 0, lenis.limit)
   }
+  activeGlide = reducedMotion
+    ? (position) => window.scrollTo(0, clamp(position, 0, lenis.limit))
+    : scrollTo
 
   /*
    * Keyboard scrolling feeds the same spring, so a key press glides exactly
@@ -405,8 +437,11 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
     event.preventDefault()
     if (url.hash !== window.location.hash) history.pushState(null, '', url.hash)
     // The rect is measured against the page as it is now, band included; the
-    // band is at rest during a click, so this is the document offset
-    scrollTo(element.getBoundingClientRect().top + lenis.actualScroll)
+    // band is at rest during a click, so this is the document offset.
+    // scroll-margin-top is honoured as the browser's own hash scroll would:
+    // the sections carry their landing offset under the fixed bars there
+    const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0
+    scrollTo(element.getBoundingClientRect().top + lenis.actualScroll - margin)
   }
 
   window.addEventListener('keydown', onKeyDown)
@@ -415,6 +450,7 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
   return {
     lenis,
     destroy: () => {
+      activeGlide = null
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onClick)
       stopFrame()
