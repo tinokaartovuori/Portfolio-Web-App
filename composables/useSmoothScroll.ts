@@ -140,7 +140,24 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
    */
   let nativeOverscroll = false
 
+  /*
+   * Lenis registers its wheel and touch listeners with `passive: false`, so
+   * that it can take a gesture over. A non-passive touch listener anywhere
+   * on the path is enough to take touch scrolling off the compositor: the
+   * browser has to wait for the main thread on every touchmove before it may
+   * scroll, and on a phone the main thread is the one drawing the scene, so
+   * the whole page stuttered with it. Where the touch is native (no
+   * syncTouch) and the primary pointer is a finger, Lenis therefore listens
+   * on a detached element — there is no wheel to take over there — and the
+   * part of a drag past an edge is watched below, with passive listeners.
+   */
+  const passiveTouch =
+    !reducedMotion &&
+    !scrollConfig.syncTouch &&
+    window.matchMedia('(pointer: coarse)').matches
+
   const lenis = new Lenis({
+    eventsTarget: passiveTouch ? document.createElement('div') : window,
     // The frame loop drives this, so scroll, mesh transforms and the WebGL draw
     // cannot desync
     autoRaf: false,
@@ -200,6 +217,39 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       return false
     },
   })
+
+  // The finger past an edge, watched without standing in the browser's way
+  // (passive): the same bookkeeping as the touch branch of virtualScroll
+  let lastTouchY = 0
+  const onTouchStart = (event: TouchEvent) => {
+    if (nativeOverscroll) return
+    touching = true
+    touchDrag = 0
+    lastTouchY = event.touches[0]?.clientY ?? 0
+  }
+  const onTouchMove = (event: TouchEvent) => {
+    if (nativeOverscroll || !touching) return
+    const y = event.touches[0]?.clientY ?? lastTouchY
+    const deltaY = lastTouchY - y
+    lastTouchY = y
+    const excess = excessPast(lenis.actualScroll + deltaY, lenis.limit)
+    if (excess !== 0) touchDrag -= excess
+    else if (touchDrag !== 0) {
+      const released = touchDrag - deltaY
+      touchDrag = Math.sign(released) === Math.sign(touchDrag) ? released : 0
+    }
+  }
+  const onTouchEnd = () => {
+    touching = false
+    touchDrag = 0
+  }
+  if (passiveTouch) {
+    const passive = { passive: true } as const
+    window.addEventListener('touchstart', onTouchStart, passive)
+    window.addEventListener('touchmove', onTouchMove, passive)
+    window.addEventListener('touchend', onTouchEnd, passive)
+    window.addEventListener('touchcancel', onTouchEnd, passive)
+  }
 
   // Start wherever the page already is (a restored position, a hash)
   scroll.set(lenis.actualScroll)
@@ -453,6 +503,10 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       activeGlide = null
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('click', onClick)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
       stopFrame()
       lenis.destroy()
       content.style.transform = ''

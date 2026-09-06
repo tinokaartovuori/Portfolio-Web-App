@@ -12,8 +12,11 @@
       by plugins/three-warm.client.ts alongside it and the component mounts
       once both are in. Until then the page is the CSS plates and the imgs.
     -->
+    <!-- `?gl=0` leaves the scene out and `?perf` shows the frame meter: the
+         bisect kit for a phone that cannot be profiled from the desk -->
     <ClientOnly>
-      <LazyThreeScrollCanvas />
+      <LazyThreeScrollCanvas v-if="route.query.gl !== '0'" />
+      <PerfMeter v-if="route.query.perf !== undefined" />
     </ClientOnly>
 
     <header>
@@ -44,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+const route = useRoute()
+
 // A page with a title gets it appended with the name; a page with none (the
 // home page, the error page) keeps the default tagline title. A function
 // title template belongs in useHead, not the static head in nuxt.config.

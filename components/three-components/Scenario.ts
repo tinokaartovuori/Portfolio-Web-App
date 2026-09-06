@@ -110,7 +110,13 @@ export default class Scenario {
    */
   private updatePixelRatio() {
     const maxRatio = window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2
-    const ratio = Math.min(window.devicePixelRatio, maxRatio)
+    // `?dpr=1` on the address bar overrides the cap, for testing a device
+    // that cannot be profiled from here (the perf overlay, `?perf`)
+    const override = Number(
+      new URLSearchParams(window.location.search).get('dpr'),
+    )
+    const ratio =
+      override > 0 ? override : Math.min(window.devicePixelRatio, maxRatio)
     this.renderer.setPixelRatio(ratio)
     this.composer?.setPixelRatio(ratio)
   }
