@@ -20,4 +20,13 @@ export const viewport = {
    * which is viewport-relative, becomes canvas-relative by subtracting this.
    */
   top: 0,
+  /**
+   * Where the canvas's top edge is in the document, in CSS px: the
+   * transform the canvas component anchors its host with, a whole number.
+   * For what is pinned to the document rather than to a box (the page
+   * grain): a canvas pixel's document position is this plus its row.
+   */
+  docTop: 0,
+  /** The pixel ratio the renderer draws at (capped, see Scenario). */
+  ratio: 1,
 }

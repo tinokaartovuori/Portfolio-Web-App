@@ -122,7 +122,7 @@ export const motion = {
    * fade needs a definite end (a CSS plate to hide, a final `opacity: 0`).
    */
   reveal: {
-    /** DOM-side envelope (scroll track, grain), from the first client frame. */
+    /** DOM-side envelope (the scroll track), from the first client frame. */
     page: 0.5,
     /** Scene-wide envelope (the dust), from the frame after the first render. */
     scene: 0.8,
@@ -136,11 +136,20 @@ export const motion = {
   },
 
   /**
-   * Every grain on the site — the film in the photographs, the frost on the
-   * light fields — is re-rolled this many times a second. Slow, so it lives
-   * rather than fizzes; a still grain reads as texture, a fast one as noise.
+   * The grain: one surface texture the whole site shares, drawn three times
+   * over — over the page behind everything (PageGrain), pinned to the
+   * document so it scrolls with it; inside each photograph, pinned to the
+   * plane so it rides with the image through its trail and tilt; and over
+   * each light field's plate, pinned to the plate. All three hash the same
+   * document position, so where they meet the pattern runs on across the
+   * seam. A grain is grey mixed over the surface at `alpha` (by theme), one
+   * grain per `cell` CSS px (rounded to whole device px), in sRGB like a
+   * layer over the page would be. The page and the plates roll at
+   * `noise.rate`; the photographs re-roll theirs `rate` times a second:
+   * slow, so it lives rather than fizzes; a still grain reads as texture, a
+   * fast one as noise.
    */
-  grain: { rate: 2.5 },
+  grain: { rate: 2.5, cell: 1.4, alpha: [0.05, 0.06] as const },
 
   /**
    * The colours the decorative meshes draw with, as `[light, dark]` hex pairs
@@ -264,9 +273,9 @@ export const motion = {
     zoom: 1,
     parallax: 0,
 
-    /** Film grain inside the image only, amplitude in colour units; it is
-     * re-rolled at `motion.grain.rate` like every grain on the site. */
-    grain: { amount: 0 },
+    /** Film grain inside the photograph, pinned to the plane: the site's
+     * grain (`motion.grain`) at this share of its alpha. */
+    grain: { amount: 1 },
 
     /**
      * Named treatments a ThreeImage can ask for (`variant`). `background`
@@ -378,11 +387,16 @@ export const motion = {
     /** Extra intensity at full scroll energy, as a share. */
     brighten: 0.35,
     /**
-     * Frost: a still per-pixel grain in colour units, shown only where the
-     * lights are, so the plate reads as frosted glass rather than a gradient.
-     * Also what hides banding in the light tails.
+     * Frost: a grain in colour units in the lit parts only, on top of the
+     * surface grain below, for a plate that reads as frosted glass rather
+     * than a gradient. Off: with the surface grain over the whole plate the
+     * frost on top made the hero far grainier than the page around it.
      */
-    grain: 0.05,
+    grain: 0,
+    /** The site's grain (`motion.grain`) over the whole plate, at this share
+     * of its alpha: the plate is opaque, so the page's grain stops at its
+     * edge and it carries its own, pinned to it. */
+    surface: 1,
     presets: {
       hero: {
         /** Lights in the field, at most 6. */
@@ -516,23 +530,25 @@ export const motion = {
   },
 
   /**
-   * The grain over the page (NoiseOverlay): a fixed canvas of grey noise laid
-   * over everything, the canvas and the text alike, so the whole site has one
-   * surface.
+   * The grain over the page (PageGrain): the site's grain (`motion.grain`)
+   * drawn behind everything in the scene, pinned to the document so it
+   * scrolls with the page, under the text and around the photographs and the
+   * plates, which carry their own.
    */
   noise: {
-    /** One grain, in CSS px; the noise is drawn at that resolution and
-     * scaled up unfiltered. */
-    grain: 1.4,
-    /** Opacity of the layer, `[light, dark]` theme. A few percent: enough
-     * to read as a surface up close, invisible as a layer. */
-    alpha: [0.05, 0.06],
     /**
      * Re-rolled this many times a second — slower than the grain in the
-     * photographs and the frost, because this one sits over the text, where
-     * a lively grain reads as interference. Still under reduced motion.
+     * photographs, because this one sits under the text, where a lively
+     * grain reads as interference. Still under reduced motion.
      */
     rate: 0.6,
+    /**
+     * The share of the page's scroll the grain moves by: less than 1, so it
+     * sits behind the page like the far dust does, the page and the plates
+     * a window onto it. The plates' grain moves by the same share, so the
+     * pattern runs on across a plate's edge at every scroll position.
+     */
+    parallax: 0.2,
   },
 
   /** The scroll prompt in the bottom bar (BottomBar.vue). */

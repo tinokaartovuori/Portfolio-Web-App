@@ -75,8 +75,11 @@ function toggle() {
     background-color 600ms cubic-bezier(0.4, 0, 0.2, 1),
     color 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Tailwind 4's translate-x-* utilities set the `translate` property, not a
+   transform, so that is what has to be transitioned or the thumb jumps */
 .thumb {
   transition:
+    translate 500ms cubic-bezier(0.4, 0, 0.2, 1),
     transform 500ms cubic-bezier(0.4, 0, 0.2, 1),
     background-color 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }

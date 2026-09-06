@@ -24,6 +24,7 @@ import Scenario from './three-components/Scenario'
 import ImageManager from './three-components/ImageManager'
 import ElementManager from './three-components/ElementManager'
 import Particles from './three-components/Particles'
+import PageGrain from './three-components/PageGrain'
 import HalationPass from './three-components/HalationPass'
 import {
   setTextureAnisotropy,
@@ -90,20 +91,25 @@ const publishViewport = () => {
  * Puts the host over the viewport for this frame: its top a margin above
  * the visible top, so that the scroll between two JS frames (at most a few
  * dozen px) exposes no edge of it, and publishes where that leaves its top
- * edge in the viewport. A transform, so the compositor moves it; the
- * rubber band's translation of the container is inherited and is in the
- * measured top like it is in every rect the meshes read.
+ * edge in the viewport. A transform, so the compositor moves it. The rubber
+ * band's translation of the container would be inherited; it is taken back
+ * out here, so the host holds its place in the viewport while the page is
+ * pulled past an edge and the ground the band reveals is drawn (the
+ * container's clip is on an outer box that does not move, so the host may
+ * reach past the band's edge). The band is still in every rect the meshes
+ * read, and in the measured top, so the meshes follow the page.
  */
 let anchored = Number.NaN
 const anchorHost = () => {
   const el = host.value
   if (!el) return
   const margin = (viewport.height - window.innerHeight) / 2
-  const y = Math.round(window.scrollY - margin)
+  const y = Math.round(window.scrollY - margin - scrollFrame.overscroll)
   if (y !== anchored) {
     anchored = y
     el.style.transform = `translate3d(0, ${y}px, 0)`
   }
+  viewport.docTop = y
   viewport.top = el.getBoundingClientRect().top
 }
 
@@ -116,8 +122,10 @@ const themeTarget = () => (colorMode.value === 'dark' ? 1 : 0)
 let scenario: Scenario | null = null
 let imageManager: ImageManager | null = null
 let elementManager: ElementManager | null = null
-// The dust behind the page: the one thing in the scene not pinned to an element
+// The dust behind the page and the grain over it: the two things in the
+// scene not pinned to an element
 let particles: Particles | null = null
+let pageGrain: PageGrain | null = null
 const { heroHeight } = storeToRefs(useScrollStateStore())
 
 let resizeTimeout: ReturnType<typeof setTimeout> | null = null
@@ -191,10 +199,12 @@ onMounted(async () => {
     // it is the last pass and there is no OutputPass
     scenario.enablePostProcessing([halation])
   }
+  viewport.ratio = scenario.renderer.getPixelRatio()
   setTextureAnisotropy(scenario.renderer.capabilities.getMaxAnisotropy())
   imageManager = new ImageManager(scenario.scene, scenario.renderer)
   elementManager = new ElementManager(scenario.scene)
   particles = new Particles(scenario.scene)
+  pageGrain = new PageGrain(scenario.scene, scenario.renderer)
   stopPointer = createPointerTracker()
 
   imageManager.loadImages(threeImageTracker.value)
@@ -239,6 +249,7 @@ onMounted(async () => {
       imageManager.updateImages(frame)
       elementManager.updateElementPositions(frame)
       particles?.update(frame)
+      pageGrain?.update(frame)
       if (halation) updateHalation(halation, dt)
       if (sweepQueued) {
         sweepQueued = false
@@ -287,12 +298,14 @@ onUnmounted(() => {
   imageManager?.removeImages()
   elementManager?.removeElements()
   particles?.dispose()
+  pageGrain?.dispose()
   scenario?.dispose()
   disposeAllTextures()
 
   imageManager = null
   elementManager = null
   particles = null
+  pageGrain = null
   scenario = null
 })
 
@@ -357,12 +370,16 @@ const resize = () => {
   if (!scenario || !imageManager || !elementManager) return
 
   publishViewport()
+  scenario.updateCameraSize(viewport.width, viewport.height)
+  scenario.updateRendererSize(viewport.width, viewport.height)
+  // The renderer first: the meshes' grain cells and the page grain's buffer
+  // size follow its pixel ratio
+  viewport.ratio = scenario.renderer.getPixelRatio()
+
   imageManager.resizeImages()
   elementManager.updateElements()
   particles?.resize()
-
-  scenario.updateCameraSize(viewport.width, viewport.height)
-  scenario.updateRendererSize(viewport.width, viewport.height)
+  pageGrain?.resize()
 }
 </script>
 

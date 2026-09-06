@@ -1,15 +1,23 @@
 <template>
   <!--
-    overflow-clip: anything reaching past the right edge is clipped here
-    rather than widening a phone's layout viewport (see the architecture
-    notes, "nothing may widen the page"), and anything reaching past the
-    bottom — the WebGL canvas host, translated over the viewport with a
-    margin below it — is clipped rather than lengthening the document,
-    which let a phone scroll past the end of the page. clip, not hidden: it
-    makes no scroll container, so the document scrolls as before.
+    Two boxes. The inner one is what the rubber band translates. The outer
+    one stays put and clips (overflow-clip): anything reaching past the
+    right edge is clipped rather than widening a phone's layout viewport
+    (see the architecture notes, "nothing may widen the page"), and anything
+    reaching past the bottom — the WebGL canvas host, translated over the
+    viewport with a margin below it — is clipped rather than lengthening the
+    document, which let a phone scroll past the end of the page. The clip
+    is on the outer, unmoving box so that its edges are the page's edges,
+    not the band's: pulled past the top or the bottom, the band reveals the
+    page's own ground (the canvas host, which holds its place under the
+    band), and the page reads as continuing rather than ending at a line.
+    clip, not hidden: it makes no scroll container, so the document scrolls
+    as before.
   -->
-  <div ref="content" class="relative z-10 w-full overflow-clip">
-    <slot />
+  <div class="relative w-full overflow-clip">
+    <div ref="content" class="relative z-10 w-full">
+      <slot />
+    </div>
   </div>
 </template>
 

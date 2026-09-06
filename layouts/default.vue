@@ -41,8 +41,6 @@
     <!-- BottomBar will be replaced with different component later and moved to child elements -->
     <BottomBar />
     <ScrollTrack />
-    <!-- The grain over everything, bars included; fixed, so a sibling of main -->
-    <NoiseOverlay />
   </div>
 </template>
 

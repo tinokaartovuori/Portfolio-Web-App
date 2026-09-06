@@ -23,6 +23,7 @@ import {
   type TextureEntry,
 } from './TextureCache'
 import { viewport } from './Viewport'
+import { grainShader, grainCell } from './grain'
 
 const config = motion.image
 
@@ -95,9 +96,18 @@ type WavyImageUniforms = {
   uLensZoom: { value: number }
   uHoverAberration: { value: number }
   uTime: { value: number }
-  /** Film grain amplitude in colour units, and its re-roll rate per second. */
+  /** Film grain: the share of grey mixed over the photograph (by theme),
+   * its re-roll rate per second, and one cell's size in plane px. */
   uGrain: { value: number }
   uGrainRate: { value: number }
+  /** One cell in device px, the box's position in the document in CSS px
+   * and the pixel ratio: the grain is hashed from document positions, the
+   * same cells the page grain has, so the two are one texture. */
+  uGrainCell: { value: number }
+  uGrainOrigin: { value: Vector2 }
+  uGrainRatio: { value: number }
+  /** The plane's size in px, for the grain's cells. */
+  uSize: { value: Vector2 }
   /** The background treatment: greyscale share, transparency, edge dissolve. */
   uMono: { value: number }
   /** The hairline inside the edge: its colour (the text colour, by theme),
@@ -169,6 +179,10 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uGrain;
   uniform float uGrainRate;
+  uniform float uGrainCell;
+  uniform vec2 uGrainOrigin;
+  uniform float uGrainRatio;
+  uniform vec2 uSize;
   uniform float uMono;
   uniform vec3 uRim;
   uniform float uRimAlpha;
@@ -177,12 +191,7 @@ const fragmentShader = /* glsl */ `
   uniform float uEdge;
   varying vec2 vUv;
 
-  // Per-pixel hash without a sine, which shows its period on some GPUs
-  float hash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
+  ${grainShader}
 
   void main() {
     vec2 uv = vUv;
@@ -208,10 +217,6 @@ const fragmentShader = /* glsl */ `
     float b = texture2D(uTexture, uv - shift).b;
     vec3 col = vec3(r, g, b);
 
-    // Film grain, inside the photograph only, re-rolled at the site's slow rate
-    float grain = hash(gl_FragCoord.xy + floor(uTime * uGrainRate) * 17.0) - 0.5;
-    col += grain * uGrain;
-
     // The background treatment: greyscale, and dissolved from a rounded
     // shape (a superellipse inscribed in the plane, in its own UV) outward,
     // so the photograph sits into the page rather than on it
@@ -234,6 +239,17 @@ const fragmentShader = /* glsl */ `
     );
     float rim = 1.0 - smoothstep(uRimWidth - 0.5, uRimWidth + 0.5, toEdge);
     col = mix(col, uRim, rim * uRimAlpha);
+
+    // The film grain: the site's grain, hashed from where this point of the
+    // plane is in the document (the box's position plus the plane's own
+    // UV, so it rides with the photograph through its trail and tilt), the
+    // same cells as the page grain around it, re-rolled at its own faster
+    // rate; uGrain is the share of grey.
+    if (uGrain > 0.0) {
+      vec2 doc = (uGrainOrigin + vec2(vUv.x, 1.0 - vUv.y) * uSize) * uGrainRatio;
+      float g = grainAt(doc, uGrainCell, floor(uTime * uGrainRate));
+      col = grainOver(col, g, uGrain);
+    }
 
     gl_FragColor = vec4(col, (1.0 - uFade) * edge);
 
@@ -344,6 +360,11 @@ export default class WavyImage
       left - viewport.width / 2 + width / 2,
       -(top - viewport.top) + viewport.height / 2 - height / 2,
     )
+    // The box in the document, for the grain (the band is in both terms)
+    this.shaderUniforms?.uGrainOrigin.value.set(
+      left,
+      top - viewport.top + viewport.docTop,
+    )
   }
 
   /**
@@ -407,8 +428,12 @@ export default class WavyImage
       uLensZoom: { value: hover.lensZoom },
       uHoverAberration: { value: aberration.hover },
       uTime: { value: 0 },
-      uGrain: { value: config.grain.amount },
+      uGrain: { value: 0 },
       uGrainRate: { value: motion.grain.rate },
+      uGrainCell: { value: 1 },
+      uGrainOrigin: { value: new Vector2() },
+      uGrainRatio: { value: 1 },
+      uSize: { value: new Vector2(1, 1) },
       uMono: { value: this.variant?.mono ?? 0 },
       uRim: { value: new Color(motion.palette.base[1]) },
       uRimAlpha: { value: 0 },
@@ -475,6 +500,12 @@ export default class WavyImage
       this.dimensions.y / halfHeight,
     )
     this.shaderUniforms.uAspect.value = this.dimensions.x / this.dimensions.y
+    this.shaderUniforms.uSize.value.copy(this.dimensions)
+    this.shaderUniforms.uGrainCell.value = grainCell(
+      motion.grain.cell,
+      viewport.ratio,
+    )
+    this.shaderUniforms.uGrainRatio.value = viewport.ratio
     this.updateCover()
   }
 
@@ -576,6 +607,9 @@ export default class WavyImage
 
     // The rim follows the text colour through a theme switch
     uniforms.uRim.value.copy(rimLight).lerp(rimDark, ctx.theme)
+    const { alpha } = motion.grain
+    uniforms.uGrain.value =
+      (alpha[0] + (alpha[1] - alpha[0]) * ctx.theme) * config.grain.amount
 
     // Nothing else until the texture is attached and has been drawn once:
     // the mesh sits on its box (as it is drawn, whole, under the img on that

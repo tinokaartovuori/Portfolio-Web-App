@@ -14,6 +14,7 @@ import { arrivalFor, advance, type Arrival } from './Arrival'
 import type { TrackedObject3D } from './ElementManager'
 import type { FrameContext } from './FrameContext'
 import { viewport } from './Viewport'
+import { grainShader, grainCell } from './grain'
 
 const config = motion.lightField
 type Preset = (typeof config.presets)[keyof typeof config.presets]
@@ -64,10 +65,17 @@ type LightFieldUniforms = {
   uCursorBoost: { value: number }
   /** Vertical elongation from scroll energy, 1 at rest. */
   uStretch: { value: number }
-  /** Frost grain amplitude, and the site's grain re-roll rate. */
+  /** The grain: the frost amplitude in the lit parts, the share of grey
+   * mixed over the whole plate, one cell in device px, the plate's position
+   * in the document in CSS px, the pixel ratio and the roll step — hashed
+   * from document positions, the same cells and the same roll as the page
+   * grain around the plate, so the two are one texture across its edge. */
   uGrain: { value: number }
-  uGrainRate: { value: number }
-  uTime: { value: number }
+  uSurface: { value: number }
+  uGrainCell: { value: number }
+  uGrainOrigin: { value: Vector2 }
+  uGrainRatio: { value: number }
+  uRoll: { value: number }
 }
 
 const vertexShader = /* glsl */ `
@@ -98,16 +106,14 @@ const fragmentShader = /* glsl */ `
   uniform float uCursorBoost;
   uniform float uStretch;
   uniform float uGrain;
-  uniform float uGrainRate;
-  uniform float uTime;
+  uniform float uSurface;
+  uniform float uGrainCell;
+  uniform vec2 uGrainOrigin;
+  uniform float uGrainRatio;
+  uniform float uRoll;
   varying vec2 vUv;
 
-  // Per-pixel hash without a sine, which shows its period on some GPUs
-  float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
+  ${grainShader}
 
   void main() {
     // Rounded rectangle, as a signed distance in px from the plate's edge
@@ -139,13 +145,23 @@ const fragmentShader = /* glsl */ `
       lit += g * (1.0 - lit);
     }
 
-    // Frost: a grain in the lit parts only, so the plate reads as frosted
-    // glass rather than a gradient, re-rolled at the site's slow grain rate
-    // so it lives the way the film grain in the photographs does. The same
+    // The grain: hashed from where this point of the plate is in the
+    // document (the plate's position plus its own UV, so it rides with the
+    // plate through its trail), the same cells and the same roll as the
+    // page grain around it, so the pattern runs on across the plate's edge
+    // and only the colour changes. Frost: the grain in the lit parts, for a
+    // plate that reads as frosted glass rather than a gradient. The same
     // noise, faint, in the colour is what hides banding in the light tails.
-    float n = hash12(gl_FragCoord.xy + floor(uTime * uGrainRate) * 17.0) - 0.5;
+    vec2 doc = (uGrainOrigin + vec2(vUv.x, 1.0 - vUv.y) * uSize) * uGrainRatio;
+    float g = grainAt(doc, uGrainCell, uRoll);
+    float n = g - 0.5;
     col += n * uGrain * smoothstep(0.0, 0.25, lit);
     col += n * uDither;
+
+    // The site's grain over the whole plate: the plate is opaque, so the
+    // page's grain stops at its edge, and it carries the same grey mix
+    // itself
+    if (uSurface > 0.0) col = grainOver(col, g, uSurface);
 
     gl_FragColor = vec4(col, mask);
 
@@ -191,6 +207,9 @@ export class LightField
   private lightY: Spring[] = []
   /** Where each light was left relative to its seat, in UV. */
   private offsets: Vector2[] = []
+  /** The box's viewport position at the last measure, for the grain. */
+  private left = 0
+  private top = 0
   /** The light following the pointer, -1 for none. */
   private follower = -1
 
@@ -262,8 +281,11 @@ export class LightField
       uCursorBoost: { value: 1 },
       uStretch: { value: 1 },
       uGrain: { value: config.grain },
-      uGrainRate: { value: motion.grain.rate },
-      uTime: { value: 0 },
+      uSurface: { value: 0 },
+      uGrainCell: { value: 1 },
+      uGrainOrigin: { value: new Vector2() },
+      uGrainRatio: { value: 1 },
+      uRoll: { value: 0 },
     }
 
     const material = new ShaderMaterial({
@@ -284,6 +306,8 @@ export class LightField
   measure() {
     const { width, height, top, left } = this.element.getBoundingClientRect()
     this.sizes.set(width, height)
+    this.left = left
+    this.top = top
     this.offset.set(
       left - viewport.width / 2 + width / 2,
       -(top - viewport.top) + viewport.height / 2 - height / 2,
@@ -297,10 +321,30 @@ export class LightField
     const height = Math.max(1, this.sizes.y - inset * 2)
     this.scale.set(width, height, 1)
     this.shaderUniforms.uSize.value.set(width, height)
+    this.shaderUniforms.uGrainCell.value = grainCell(
+      motion.grain.cell,
+      viewport.ratio,
+    )
+    this.shaderUniforms.uGrainRatio.value = viewport.ratio
     // Never wider than the plate is tall, or the SDF folds over itself
     this.shaderUniforms.uRadius.value = Math.min(
       this.preset.cornerRadius,
       Math.min(width, height) / 2,
+    )
+  }
+
+  /**
+   * Where the plate's top-left corner is in the page grain's space (see
+   * PageGrain): its viewport position plus the parallax share of the scroll
+   * as seen. From the plane as drawn, not the box, so that while the plate
+   * trails its box the grain stays put on screen like the page's and the
+   * plate slides over it as a window.
+   */
+  private applyGrainOrigin(left: number, top: number, ctx: FrameContext) {
+    const seen = ctx.scroll.y - ctx.scroll.overscroll
+    this.shaderUniforms.uGrainOrigin.value.set(
+      left,
+      top + seen * motion.noise.parallax,
     )
   }
 
@@ -372,8 +416,10 @@ export class LightField
     this.measure()
     this.applySize()
     this.applyTheme(ctx.theme)
-    // The frost grain is re-rolled at the site's rate; still under reduced motion
-    this.shaderUniforms.uTime.value = ctx.reduced ? 0 : ctx.time
+    // The grain rolls with the page grain's clock; still under reduced motion
+    this.shaderUniforms.uRoll.value = ctx.reduced
+      ? 0
+      : Math.floor(ctx.time * motion.noise.rate)
 
     const { dt } = ctx
     const { preset } = this
@@ -398,7 +444,15 @@ export class LightField
         : ctx.rendered
           ? advance(this.arrival, dt, lights.duration, ctx.reduced)
           : 0
-    u.uDither.value = (2 / 255) * e
+    // The surface grain comes in with the lights too, so the plate is flat
+    // under the CSS plate until the handover. It hides the banding in the
+    // light tails on its own; the dither is only for a plate without it,
+    // since on top of it the two add up and the plate reads grainier than
+    // the page around it
+    const { alpha } = motion.grain
+    u.uSurface.value =
+      (alpha[0] + (alpha[1] - alpha[0]) * ctx.theme) * config.surface * e
+    u.uDither.value = config.surface > 0 ? 0 : (2 / 255) * e
 
     // The base size follows the geometric mean of the plate's sides, so the
     // empty space around the lights stays in proportion on a wide plate and
@@ -439,6 +493,9 @@ export class LightField
       u.uCursorBoost.value = 1
       u.uStretch.value = 1
       u.uIntensity.value = themed(preset.intensity, ctx.theme) * e
+      // On its box
+      const { inset } = preset
+      this.applyGrainOrigin(this.left + inset, this.top + inset, ctx)
       return
     }
 
@@ -454,6 +511,7 @@ export class LightField
     const left = viewport.width / 2 + this.position.x - width / 2
     const top =
       viewport.height / 2 - this.position.y - height / 2 + viewport.top
+    this.applyGrainOrigin(left, top, ctx)
     const cursor = cursorUvIn(
       ctx.pointer,
       left,
