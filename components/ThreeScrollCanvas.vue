@@ -1,5 +1,17 @@
 <template>
-  <div class="fixed inset-0 z-0 bg-platinum dark:bg-onyx">
+  <!--
+    Sized to the largest viewport (100lvh), not the window: on a phone the
+    address bar comes and goes with the scroll and the window height with
+    it; a canvas that followed was stretched until the debounced resize
+    caught up and every mesh was measured against a stale height, a jolt
+    through the scene on every toggle of the bar. The extra rows sit under
+    the bar when it is shown. Viewport.ts carries this box's size to the
+    meshes.
+  -->
+  <div
+    ref="host"
+    class="gl-host fixed inset-x-0 top-0 z-0 bg-platinum dark:bg-onyx"
+  >
     <canvas ref="threeCanvas" class="absolute inset-0" aria-hidden="true" />
   </div>
 </template>
@@ -24,7 +36,8 @@ import { storeToRefs } from 'pinia'
 
 import { useThreeObjectStateStore } from '~/store/threeObjectState'
 import { useScrollStateStore } from '~/store/scrollState'
-import { useWindowSize } from '@vueuse/core'
+import { useElementSize } from '@vueuse/core'
+import { viewport } from '~/components/three-components/Viewport'
 import { onFrame, damp } from '~/composables/useFrameLoop'
 import { scrollFrame } from '~/composables/useSmoothScroll'
 import { pointerFrame, createPointerTracker } from '~/composables/usePointer'
@@ -55,8 +68,20 @@ let halationAmount = 0
 const threeObjectState = useThreeObjectStateStore()
 const { threeElementTracker, threeImageTracker } = storeToRefs(threeObjectState)
 
-const { width, height } = useWindowSize()
+const host: Ref<HTMLElement | null> = ref(null)
+// The host's own size (a ResizeObserver), which on a phone does not follow
+// the address bar the way the window's does; see the template
+const { width, height } = useElementSize(host)
 const threeCanvas: Ref<HTMLCanvasElement | null> = ref(null)
+
+/** Publishes the host's size to the meshes (Viewport.ts) */
+const publishViewport = () => {
+  // The element's own numbers first: the observer's refs are 0 until its
+  // first callback, a frame after mount
+  viewport.width = host.value?.clientWidth || width.value || window.innerWidth
+  viewport.height =
+    host.value?.clientHeight || height.value || window.innerHeight
+}
 
 // The resolved theme ('light' | 'dark'); this component is client-only, so
 // it is known by the time anything here runs
@@ -124,6 +149,7 @@ onMounted(async () => {
   // No WebGL (or a blocked context): the page stays what it is — the CSS
   // plates and the `<img>`s are the design without the layer over them
   try {
+    publishViewport()
     scenario = new Scenario(canvas)
   } catch (error) {
     if (import.meta.dev) console.warn('[ThreeScrollCanvas] no WebGL', error)
@@ -305,11 +331,21 @@ function updateHalation(pass: HalationPass, dt: number) {
 const resize = () => {
   if (!scenario || !imageManager || !elementManager) return
 
+  publishViewport()
   imageManager.resizeImages()
   elementManager.updateElements()
   particles?.resize()
 
-  scenario.updateCameraSize(width.value, height.value)
-  scenario.updateRendererSize(width.value, height.value)
+  scenario.updateCameraSize(viewport.width, viewport.height)
+  scenario.updateRendererSize(viewport.width, viewport.height)
 }
 </script>
+
+<style scoped>
+/* The largest viewport where the unit exists (every current browser), the
+   window height where it does not */
+.gl-host {
+  height: 100vh;
+  height: 100lvh;
+}
+</style>

@@ -20,6 +20,7 @@ import { PERSPECTIVE } from './Scenario'
 import type { TrackedObject3D } from './ElementManager'
 import { arrivalFor, advance, type Arrival } from './Arrival'
 import type { FrameContext } from './FrameContext'
+import { viewport } from './Viewport'
 
 const config = motion.wireShape
 
@@ -129,8 +130,8 @@ export class WireShape
     const { width, height, top, left } = this.element.getBoundingClientRect()
     this.sizes.set(width, height)
     this.offset.set(
-      left - window.innerWidth / 2 + width / 2,
-      -top + window.innerHeight / 2 - height / 2,
+      left - viewport.width / 2 + width / 2,
+      -top + viewport.height / 2 - height / 2,
     )
   }
 
@@ -202,8 +203,8 @@ export class WireShape
 
     // Under the pointer: grow, brighten, and tip toward it
     const { x: width, y: height } = this.sizes
-    const left = window.innerWidth / 2 + this.offset.x - width / 2
-    const top = window.innerHeight / 2 - this.offset.y - height / 2
+    const left = viewport.width / 2 + this.offset.x - width / 2
+    const top = viewport.height / 2 - this.offset.y - height / 2
     const cursor = cursorUvIn(
       ctx.pointer,
       left,

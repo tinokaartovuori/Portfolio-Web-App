@@ -22,6 +22,7 @@ import {
   textureKeyFor,
   type TextureEntry,
 } from './TextureCache'
+import { viewport } from './Viewport'
 
 const config = motion.image
 
@@ -340,8 +341,8 @@ export default class WavyImage
       this.imageElement.getBoundingClientRect()
     this.dimensions.set(width, height)
     this.positionOffset.set(
-      left - window.innerWidth / 2 + width / 2,
-      -top + window.innerHeight / 2 - height / 2,
+      left - viewport.width / 2 + width / 2,
+      -top + viewport.height / 2 - height / 2,
     )
   }
 
@@ -460,8 +461,8 @@ export default class WavyImage
 
   /** The plane's place on screen, in the [-1, 1] viewport space the shader uses. */
   private updateScreenUniforms() {
-    const halfWidth = window.innerWidth / 2
-    const halfHeight = window.innerHeight / 2
+    const halfWidth = viewport.width / 2
+    const halfHeight = viewport.height / 2
     this.shaderUniforms.uScreenCenter.value.set(
       this.positionOffset.x / halfWidth,
       this.positionOffset.y / halfHeight,
@@ -524,9 +525,9 @@ export default class WavyImage
 
     // Screen-space top-left of the mesh: WebGL y is up, so the y offsets flip
     const left =
-      window.innerWidth / 2 + this.positionOffset.x - width / 2 + this.drift.x
+      viewport.width / 2 + this.positionOffset.x - width / 2 + this.drift.x
     const top =
-      window.innerHeight / 2 -
+      viewport.height / 2 -
       this.positionOffset.y -
       height / 2 -
       (this.lag.value + this.drift.y + this.hangBack)
@@ -555,7 +556,7 @@ export default class WavyImage
 
     // The crop slides with the plane's place in the viewport, clamped to the
     // overscan so the texture edge never shows
-    const viewportY = -this.positionOffset.y / window.innerHeight
+    const viewportY = -this.positionOffset.y / viewport.height
     const parallaxLimit = (1 - config.zoom) / 2
     uniforms.uParallax.value = Math.max(
       -parallaxLimit,
@@ -627,7 +628,7 @@ export default class WavyImage
     const { lean } = config
     const wide = Math.min(
       1,
-      Math.max(0, (window.innerWidth - lean.from) / (lean.to - lean.from)),
+      Math.max(0, (viewport.width - lean.from) / (lean.to - lean.from)),
     )
     const leanScale = (this.variant?.lean ?? 1) * arrived
     const leanY = -screen.x * lean.yaw * wide * leanScale

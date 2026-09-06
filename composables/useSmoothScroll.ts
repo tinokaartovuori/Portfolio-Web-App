@@ -151,9 +151,16 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
    * on a detached element — there is no wheel to take over there — and the
    * part of a drag past an edge is watched below, with passive listeners.
    */
+  // `?sync=1` on the address bar turns Lenis' syncTouch on for a visit, so a
+  // phone can be tried with JS driving the touch scroll (DOM and scene then
+  // move in the same frame) without a release
+  const syncTouch =
+    scrollConfig.syncTouch ||
+    new URLSearchParams(window.location.search).get('sync') === '1'
+
   const passiveTouch =
     !reducedMotion &&
-    !scrollConfig.syncTouch &&
+    !syncTouch &&
     window.matchMedia('(pointer: coarse)').matches
 
   const lenis = new Lenis({
@@ -164,7 +171,7 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
     // Wheel smoothing is done here, not by Lenis; lerp 1 is plain native
     lerp: 1,
     smoothWheel: false,
-    syncTouch: !reducedMotion && scrollConfig.syncTouch,
+    syncTouch: !reducedMotion && syncTouch,
     touchInertiaExponent: scrollConfig.touchInertiaExponent,
     /*
      * Every wheel and touch delta passes through here before Lenis sees it.
@@ -175,7 +182,7 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       if (reducedMotion) return true
       const isTouch = event.type.startsWith('touch')
 
-      if (isTouch && !scrollConfig.syncTouch) {
+      if (isTouch && !syncTouch) {
         if (nativeOverscroll) return true
         if (event.type === 'touchstart') {
           touching = true

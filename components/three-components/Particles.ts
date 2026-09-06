@@ -15,6 +15,7 @@ import { motion } from '~/motion.config'
 import { ease } from '~/composables/useReveal'
 import { PERSPECTIVE } from './Scenario'
 import type { FrameContext } from './FrameContext'
+import { viewport } from './Viewport'
 
 const config = motion.particles
 
@@ -286,8 +287,8 @@ export default class Particles {
     for (const layer of config.layers)
       largest = Math.max(largest, layer.size[1])
     const margin = largest * 2 + streak.max
-    const width = window.innerWidth + margin * 2
-    const height = window.innerHeight + margin * 2
+    const width = viewport.width + margin * 2
+    const height = viewport.height + margin * 2
     this.uniforms.uField.value.set(width, height)
 
     const area = (width * height) / 1e6
@@ -352,7 +353,7 @@ export default class Particles {
     const heroBottom = Number.isFinite(ctx.heroHeight)
       ? ctx.heroHeight - scrolled
       : 1e9
-    u.uCut.value = window.innerHeight / 2 - heroBottom
+    u.uCut.value = viewport.height / 2 - heroBottom
 
     if (ctx.reduced) {
       this.feel.reset()
@@ -377,10 +378,9 @@ export default class Particles {
     const { shift } = config.pointer
     if (pointer.active) {
       this.pointerX.target =
-        ((pointer.x - window.innerWidth / 2) / (window.innerWidth / 2)) * shift
+        ((pointer.x - viewport.width / 2) / (viewport.width / 2)) * shift
       this.pointerY.target =
-        (-(pointer.y - window.innerHeight / 2) / (window.innerHeight / 2)) *
-        shift
+        (-(pointer.y - viewport.height / 2) / (viewport.height / 2)) * shift
     } else {
       this.pointerX.target = 0
       this.pointerY.target = 0

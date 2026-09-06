@@ -13,6 +13,7 @@ import { motion } from '~/motion.config'
 import { arrivalFor, advance, type Arrival } from './Arrival'
 import type { TrackedObject3D } from './ElementManager'
 import type { FrameContext } from './FrameContext'
+import { viewport } from './Viewport'
 
 const config = motion.lightField
 type Preset = (typeof config.presets)[keyof typeof config.presets]
@@ -284,8 +285,8 @@ export class LightField
     const { width, height, top, left } = this.element.getBoundingClientRect()
     this.sizes.set(width, height)
     this.offset.set(
-      left - window.innerWidth / 2 + width / 2,
-      -top + window.innerHeight / 2 - height / 2,
+      left - viewport.width / 2 + width / 2,
+      -top + viewport.height / 2 - height / 2,
     )
   }
 
@@ -450,8 +451,8 @@ export class LightField
     // the light is left where it is — its displacement from its seat becomes
     // an offset it carries on from — so nothing snaps back
     const { x: width, y: height } = u.uSize.value
-    const left = window.innerWidth / 2 + this.position.x - width / 2
-    const top = window.innerHeight / 2 - this.position.y - height / 2
+    const left = viewport.width / 2 + this.position.x - width / 2
+    const top = viewport.height / 2 - this.position.y - height / 2
     const cursor = cursorUvIn(
       ctx.pointer,
       left,

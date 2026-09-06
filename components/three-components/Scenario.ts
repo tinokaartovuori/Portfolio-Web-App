@@ -11,6 +11,7 @@ import {
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import type { Pass } from 'three/addons/postprocessing/Pass.js'
+import { viewport } from './Viewport'
 
 /**
  * A scene, a camera and a renderer.
@@ -47,8 +48,10 @@ export default class Scenario {
   height: number
 
   constructor(canvas: HTMLCanvasElement) {
-    this.width = window.innerWidth
-    this.height = window.innerHeight
+    // The canvas's own size (Viewport.ts), set by the canvas component before
+    // this is constructed; the window's as a fallback
+    this.width = viewport.width || window.innerWidth
+    this.height = viewport.height || window.innerHeight
 
     this.scene = new Scene()
     this.perspective = PERSPECTIVE
