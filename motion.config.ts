@@ -217,8 +217,12 @@ export const motion = {
      */
     lean: { yaw: 0.2, roll: 0, from: 1024, to: 1600 },
 
-    /** Idle drift so the images read as floating rather than pasted on. */
-    float: { amplitude: 4, speed: 0.55 },
+    /**
+     * Idle drift, in px. Off: at rest a photograph sits exactly on its box
+     * (the drift read as the images creeping about on a still page; set an
+     * amplitude to have them float).
+     */
+    float: { amplitude: 0, speed: 0.55 },
 
     /** Cursor interaction (fine pointers only). */
     hover: {

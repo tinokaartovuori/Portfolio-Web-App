@@ -74,10 +74,40 @@ async function like() {
   return liked.value
 }
 
+/**
+ * Takes this browser's like back: the mirror of `like()`. The count moves
+ * at once and the server's answer replaces it, or the like is put back when
+ * the request fails. Returns whether a like was actually taken back.
+ */
+async function unlike() {
+  if (!liked.value || pending.value) return false
+  pending.value = true
+  liked.value = false
+  const before = count.value
+  count.value = Math.max(0, (before ?? 1) - 1)
+  try {
+    const { likes } = await $fetch<{ likes: number }>('/api/likes', {
+      method: 'DELETE',
+    })
+    count.value = likes
+    try {
+      localStorage.removeItem(LIKED_KEY)
+    } catch {
+      // Not forgotten: the heart is full again on the next visit, no worse
+    }
+  } catch {
+    liked.value = true
+    count.value = before
+  } finally {
+    pending.value = false
+  }
+  return !liked.value
+}
+
 export function useLikes() {
   onMounted(() => {
     void load()
   })
 
-  return { count, liked, pending, like }
+  return { count, liked, pending, like, unlike }
 }

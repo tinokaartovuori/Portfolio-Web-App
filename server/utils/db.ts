@@ -76,6 +76,16 @@ export function addLike(): number {
   return getLikes()
 }
 
+/** One like fewer, never below zero. */
+export function removeLike(): number {
+  useDb()
+    .prepare(
+      "UPDATE counters SET value = value - 1 WHERE key = 'likes' AND value > 0",
+    )
+    .run()
+  return getLikes()
+}
+
 export function recordView(path: string) {
   useDb()
     .prepare(

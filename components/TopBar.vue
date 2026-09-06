@@ -10,7 +10,7 @@
         >
           <WaveText
             text="Tino Kaartovuori"
-            class="text-lg font-light text-onyx sm:text-xl md:text-2xl dark:text-platinum"
+            class="text-lg font-light whitespace-nowrap text-onyx sm:text-xl md:text-2xl dark:text-platinum"
             onHover
           />
         </NuxtLink>
@@ -89,7 +89,7 @@
                 >
                   <WaveText
                     :text="item.label"
-                    class="text-lg font-light text-onyx sm:text-xl md:text-2xl dark:text-platinum"
+                    class="text-lg font-light whitespace-nowrap text-onyx sm:text-xl md:text-2xl dark:text-platinum"
                     onHover
                   />
                 </a>

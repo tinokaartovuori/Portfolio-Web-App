@@ -19,7 +19,7 @@
     class="like-button pointer-events-auto flex items-center gap-2 text-lg font-light text-onyx sm:gap-2.5 sm:text-xl md:text-2xl dark:text-platinum"
     :class="{ 'like-accent': liked && pastHero }"
     :aria-pressed="liked"
-    :aria-label="liked ? 'Liked' : 'Like this site'"
+    :aria-label="liked ? 'Liked, press to take it back' : 'Like this site'"
     @click="onPress"
     @pointerenter="hover = true"
     @pointerleave="hover = false"
@@ -73,7 +73,7 @@ import { Spring } from '~/utils/spring'
 import { formatCount } from '~/utils/formatCount'
 import { motion } from '~/motion.config'
 
-const { count, liked, like } = useLikes()
+const { count, liked, like, unlike } = useLikes()
 const config = motion.like
 
 // Outside a Bar (nowhere today) the heart is simply over the page
@@ -126,8 +126,15 @@ onMounted(() => {
 })
 
 const onPress = () => {
-  // A press on a heart already given still pops: the button answers the
-  // hand, the count does not
+  // A second press takes the like back: the heart empties and settles
+  // without the pop and the ring, which are for giving one
+  if (liked.value) {
+    void unlike()
+    if (reduced) return
+    scale.value = 1 - (config.pop - 1) / 2
+    scale.velocity = 0
+    return
+  }
   void like()
   if (reduced) return
   scale.value = config.pop
