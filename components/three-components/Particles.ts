@@ -353,7 +353,14 @@ export default class Particles {
     const heroBottom = Number.isFinite(ctx.heroHeight)
       ? ctx.heroHeight - scrolled
       : 1e9
-    u.uCut.value = viewport.height / 2 - heroBottom
+    u.uCut.value = viewport.height / 2 - (heroBottom - viewport.top)
+
+    // The field is the viewport's, not the page's: the canvas scrolls with
+    // the page, so the plane is moved to the visible viewport's centre each
+    // frame (in canvas world y, scaled for its depth like everything on it)
+    const centreY =
+      viewport.height / 2 - (window.innerHeight / 2 - viewport.top)
+    this.mesh.position.y = (centreY * (PERSPECTIVE + DEPTH)) / PERSPECTIVE
 
     if (ctx.reduced) {
       this.feel.reset()
@@ -380,7 +387,8 @@ export default class Particles {
       this.pointerX.target =
         ((pointer.x - viewport.width / 2) / (viewport.width / 2)) * shift
       this.pointerY.target =
-        (-(pointer.y - viewport.height / 2) / (viewport.height / 2)) * shift
+        (-(pointer.y - window.innerHeight / 2) / (window.innerHeight / 2)) *
+        shift
     } else {
       this.pointerX.target = 0
       this.pointerY.target = 0

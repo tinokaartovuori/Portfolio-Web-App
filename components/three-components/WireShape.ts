@@ -131,7 +131,7 @@ export class WireShape
     this.sizes.set(width, height)
     this.offset.set(
       left - viewport.width / 2 + width / 2,
-      -top + viewport.height / 2 - height / 2,
+      -(top - viewport.top) + viewport.height / 2 - height / 2,
     )
   }
 
@@ -204,7 +204,7 @@ export class WireShape
     // Under the pointer: grow, brighten, and tip toward it
     const { x: width, y: height } = this.sizes
     const left = viewport.width / 2 + this.offset.x - width / 2
-    const top = viewport.height / 2 - this.offset.y - height / 2
+    const top = viewport.height / 2 - this.offset.y - height / 2 + viewport.top
     const cursor = cursorUvIn(
       ctx.pointer,
       left,

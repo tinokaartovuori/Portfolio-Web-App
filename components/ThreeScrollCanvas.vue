@@ -1,17 +1,20 @@
 <template>
   <!--
-    Sized to the largest viewport (100lvh), not the window: on a phone the
-    address bar comes and goes with the scroll and the window height with
-    it; a canvas that followed was stretched until the debounced resize
-    caught up and every mesh was measured against a stale height, a jolt
-    through the scene on every toggle of the bar. The extra rows sit under
-    the bar when it is shown. Viewport.ts carries this box's size to the
-    meshes.
+    The canvas lives in the scrolled document, not fixed over it. A phone
+    scrolls on the compositor at the display's rate (120 Hz on a current
+    one) while the page's JS runs at 60, so a fixed canvas that JS positions
+    from the DOM's rects is a frame behind the DOM every other display frame
+    — the images judder against their boxes and the ground the scroll
+    exposes is painted late. In the document the compositor carries the
+    canvas with the page between JS frames and the meshes stay glued to
+    their boxes; JS only updates the effects. Each frame the host is put
+    over the viewport with a transform (a margin above and below, for the
+    scroll between two JS frames), and Viewport.ts carries its size and its
+    viewport top to the meshes, which measure against the canvas rather than
+    the window. Sized from the largest viewport (lvh) so the address bar
+    coming and going changes nothing.
   -->
-  <div
-    ref="host"
-    class="gl-host fixed inset-x-0 top-0 z-0 bg-platinum dark:bg-onyx"
-  >
+  <div ref="host" class="gl-host pointer-events-none absolute inset-x-0 top-0">
     <canvas ref="threeCanvas" class="absolute inset-0" aria-hidden="true" />
   </div>
 </template>
@@ -81,6 +84,27 @@ const publishViewport = () => {
   viewport.width = host.value?.clientWidth || width.value || window.innerWidth
   viewport.height =
     host.value?.clientHeight || height.value || window.innerHeight
+}
+
+/**
+ * Puts the host over the viewport for this frame: its top a margin above
+ * the visible top, so that the scroll between two JS frames (at most a few
+ * dozen px) exposes no edge of it, and publishes where that leaves its top
+ * edge in the viewport. A transform, so the compositor moves it; the
+ * rubber band's translation of the container is inherited and is in the
+ * measured top like it is in every rect the meshes read.
+ */
+let anchored = Number.NaN
+const anchorHost = () => {
+  const el = host.value
+  if (!el) return
+  const margin = (viewport.height - window.innerHeight) / 2
+  const y = Math.round(window.scrollY - margin)
+  if (y !== anchored) {
+    anchored = y
+    el.style.transform = `translate3d(0, ${y}px, 0)`
+  }
+  viewport.top = el.getBoundingClientRect().top
 }
 
 // The resolved theme ('light' | 'dark'); this component is client-only, so
@@ -200,6 +224,7 @@ onMounted(async () => {
   stopFrame.push(
     onFrame('transform', (dt, time) => {
       if (!imageManager || !elementManager) return
+      anchorHost()
       frame.dt = dt
       frame.time = time
       frame.reduced = scrollFrame.reduced
@@ -343,9 +368,14 @@ const resize = () => {
 
 <style scoped>
 /* The largest viewport where the unit exists (every current browser), the
-   window height where it does not */
+   window height where it does not, plus the margin above and below that the
+   scroll between two JS frames runs into (see the template). Behind the
+   in-flow content of the scroll container (a negative z-index in its
+   stacking context) and above the page colour. */
 .gl-host {
-  height: 100vh;
-  height: 100lvh;
+  height: calc(100vh * 1.3);
+  height: calc(100lvh * 1.3);
+  z-index: -1;
+  will-change: transform;
 }
 </style>

@@ -286,7 +286,7 @@ export class LightField
     this.sizes.set(width, height)
     this.offset.set(
       left - viewport.width / 2 + width / 2,
-      -top + viewport.height / 2 - height / 2,
+      -(top - viewport.top) + viewport.height / 2 - height / 2,
     )
   }
 
@@ -452,7 +452,8 @@ export class LightField
     // an offset it carries on from — so nothing snaps back
     const { x: width, y: height } = u.uSize.value
     const left = viewport.width / 2 + this.position.x - width / 2
-    const top = viewport.height / 2 - this.position.y - height / 2
+    const top =
+      viewport.height / 2 - this.position.y - height / 2 + viewport.top
     const cursor = cursorUvIn(
       ctx.pointer,
       left,

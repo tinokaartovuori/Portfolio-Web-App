@@ -106,7 +106,7 @@ Update flow, all via `watch`:
 - `watch(threeObjectState)` → tear down and rebuild all meshes (page navigation)
 - `onUnmounted` → unregister both frame callbacks, drop every mesh and dispose the renderer
 
-The canvas wrapper is `fixed inset-0 z-0`; page content sits above it at `z-10`. Nothing here relies on a third-party stylesheet for stacking any more.
+**The canvas lives in the scrolled document, not fixed over it** (September 2026, after the first real phones). A phone scrolls on the compositor at the display's rate — 120 Hz on a current one — while the page's JS, rAF included, runs at 60 in Chrome and Brave on Android whatever the page does (a blank page measures 16.6 ms there); a fixed canvas that JS positions from the DOM's rects is therefore a frame behind the DOM every other display frame, the images judder against their boxes and the ground the scroll exposes is painted late, which read as "everything stutters" even with every JS frame on time. So the canvas host is `position: absolute` inside `ScrollContainer` (first child, `z-index: -1` in the container's stacking context, so it paints under `main` and the footer and over the page colour), `pointer-events-none`, `1.3 × 100lvh` tall, and each frame the canvas component puts it over the viewport with a transform (`window.scrollY` less the margin above; `anchorHost()` in the `transform` stage, before the managers) and publishes where that leaves its top edge as `viewport.top`. Between two JS frames the compositor carries the canvas with the page, so the meshes stay glued to their boxes and only the effects update at 60; the margin above and below (15% of the height each) is for the scroll of one JS frame. The rubber band's translation of the container moves the host too, and is in the measured `viewport.top` like it is in every rect. Under `?gl=0` the layout leaves the component out.
 
 ### 6. Positioning convention for 3D objects
 
@@ -116,10 +116,12 @@ Every object class (`WavyImage`, `LightField`, `WireShape`) repeats the same pat
 const { width, height, top, left } = element.getBoundingClientRect()
 sizes.set(width, height)
 offset.set(
-  left - window.innerWidth / 2 + width / 2, // viewport-center-relative X
-  -top + window.innerHeight / 2 - height / 2, // Y, flipped for WebGL
+  left - viewport.width / 2 + width / 2, // canvas-centre-relative X
+  -(top - viewport.top) + viewport.height / 2 - height / 2, // Y, flipped for WebGL
 )
 ```
+
+`viewport` is `three-components/Viewport.ts`: the canvas's own size and where its top edge is in the viewport this frame (section 5). The rect is viewport-relative; subtracting `viewport.top` makes it canvas-relative, and the canvas's height is what the camera's fov spans. The inverse (a mesh's box back in viewport px, for the cursor tests) adds `viewport.top` back. Anything that wants "where on the *screen*" — the bubble's screen-space centre, the crop's parallax, the dust's pointer parallax — measures against `window.innerHeight` and `viewport.top`, not the canvas, which is taller than the window.
 
 An element class **is** the mesh — it extends `Mesh` rather than wrapping one in an `Object3D`, so there is no inner node to keep in sync and `this.geometry` / `this.material` are the typed pair three already maintains. It has to expose `update()` (full re-measure, effects at rest), `updatePosition(ctx)` (per frame), `updateAspectRatio()` and `dispose()`: that is the `TrackedObject3D` interface `ElementManager` types its array with, so a missing method is a compile error. `ImageManager` is the outlier: it stores `WavyImage[]` and calls `update(ctx)`, `resize()` and `dispose()`, which is the smaller `DomPinnedMesh` contract `WavyImage` implements.
 

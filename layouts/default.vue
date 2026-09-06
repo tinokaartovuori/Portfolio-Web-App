@@ -2,20 +2,9 @@
   <div id="app-wrapper">
     <a href="#main-content" class="skip-link">Skip to content</a>
 
-    <!--
-      The WebGL scene is a fixed backdrop the document scrolls over; its meshes
-      are positioned from each tracked element's viewport rect, so it must not
-      scroll with the content.
-    -->
-    <!--
-      Lazy, so three.js is not on the path to hydration: the chunk is fetched
-      by plugins/three-warm.client.ts alongside it and the component mounts
-      once both are in. Until then the page is the CSS plates and the imgs.
-    -->
-    <!-- `?gl=0` leaves the scene out and `?perf` shows the frame meter: the
-         bisect kit for a phone that cannot be profiled from the desk -->
+    <!-- `?perf` shows the frame meter: the bisect kit for a phone that
+         cannot be profiled from the desk (with `?gl=0` below) -->
     <ClientOnly>
-      <LazyThreeScrollCanvas v-if="route.query.gl !== '0'" />
       <PerfMeter v-if="route.query.perf !== undefined" />
     </ClientOnly>
 
@@ -32,6 +21,17 @@
       because everything that scrolls must be (nothing fixed may).
     -->
     <ScrollContainer>
+      <!--
+        The WebGL scene, in the scrolled document so the compositor carries
+        it with the page between JS frames (see the component); it puts
+        itself over the viewport every frame. Lazy, so three.js is not on the
+        path to hydration: the chunk is fetched by plugins/three-warm.client.ts
+        alongside it and the component mounts once both are in. Until then,
+        and with `?gl=0`, the page is the CSS plates and the imgs.
+      -->
+      <ClientOnly>
+        <LazyThreeScrollCanvas v-if="route.query.gl !== '0'" />
+      </ClientOnly>
       <main id="main-content" class="relative z-10" tabindex="-1">
         <slot />
       </main>

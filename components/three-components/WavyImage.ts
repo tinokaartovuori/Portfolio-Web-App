@@ -342,7 +342,7 @@ export default class WavyImage
     this.dimensions.set(width, height)
     this.positionOffset.set(
       left - viewport.width / 2 + width / 2,
-      -top + viewport.height / 2 - height / 2,
+      -(top - viewport.top) + viewport.height / 2 - height / 2,
     )
   }
 
@@ -461,11 +461,14 @@ export default class WavyImage
 
   /** The plane's place on screen, in the [-1, 1] viewport space the shader uses. */
   private updateScreenUniforms() {
+    // The visible viewport, not the canvas: the canvas is taller than the
+    // window and sits where the scroll has it (viewport.top)
     const halfWidth = viewport.width / 2
-    const halfHeight = viewport.height / 2
+    const halfHeight = window.innerHeight / 2
+    const centreY = viewport.height / 2 - this.positionOffset.y + viewport.top
     this.shaderUniforms.uScreenCenter.value.set(
       this.positionOffset.x / halfWidth,
-      this.positionOffset.y / halfHeight,
+      (halfHeight - centreY) / halfHeight,
     )
     this.shaderUniforms.uScreenSize.value.set(
       this.dimensions.x / halfWidth,
@@ -530,7 +533,8 @@ export default class WavyImage
       viewport.height / 2 -
       this.positionOffset.y -
       height / 2 -
-      (this.lag.value + this.drift.y + this.hangBack)
+      (this.lag.value + this.drift.y + this.hangBack) +
+      viewport.top
 
     return cursorUvIn(ctx.pointer, left, top, width, height, cursorScratch)
   }
@@ -556,7 +560,12 @@ export default class WavyImage
 
     // The crop slides with the plane's place in the viewport, clamped to the
     // overscan so the texture edge never shows
-    const viewportY = -this.positionOffset.y / viewport.height
+    const viewportY =
+      (viewport.height / 2 -
+        this.positionOffset.y +
+        viewport.top -
+        window.innerHeight / 2) /
+      window.innerHeight
     const parallaxLimit = (1 - config.zoom) / 2
     uniforms.uParallax.value = Math.max(
       -parallaxLimit,
