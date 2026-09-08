@@ -20,10 +20,14 @@ export const motion = {
      */
     spring: { stiffness: 80, damping: 18 },
     /**
-     * Velocity cap. A violent wheel spin becomes a controlled glide at this
-     * speed instead of a jump, and a long Home/End or anchor travel is bounded.
+     * Velocity cap, in viewport heights per second. A violent wheel spin
+     * becomes a controlled glide at this speed instead of a jump, and a long
+     * Home/End or anchor travel is bounded. In screens rather than px so the
+     * glide reads the same on every display: a cap in px was three screens a
+     * second on a 1080p display and two on a 1440p one, where it dragged.
+     * Refreshed every frame from the window's height.
      */
-    maxSpeed: 3200,
+    maxSpeed: 4.5,
     /** Scales wheel deltas before they reach the spring. */
     wheelMultiplier: 1,
     /**

@@ -109,12 +109,11 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
   /*
    * The scroll integrator. `target` is where the input wants to be; `scroll`
    * is where the page is. Critically damped so it never overshoots and scrolls
-   * back, velocity-capped so a wheel spin is a glide rather than a jump.
+   * back, velocity-capped so a wheel spin is a glide rather than a jump. The
+   * cap is in screens a second, so it is set from the window's height each
+   * frame below, not here.
    */
-  const scroll = new Spring({
-    ...scrollConfig.spring,
-    maxVelocity: scrollConfig.maxSpeed,
-  })
+  const scroll = new Spring(scrollConfig.spring)
   let target = 0
   /** The last position this integrator wrote, to tell its own scroll events
    * from a finger, a scrollbar drag or a scroll restoration. */
@@ -318,6 +317,10 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       // The range can shrink under the page (content resize)
       target = clamp(target, 0, max)
       scroll.target = target
+      // The cap in px follows the window: a glide is so many screens a
+      // second on every display, and on a phone the address bar's coming and
+      // going moves it with the viewport
+      scroll.maxVelocity = scrollConfig.maxSpeed * window.innerHeight
       scroll.update(dt)
       if (scroll.settled) scroll.set(target)
       scroll.value = clamp(scroll.value, 0, max)
