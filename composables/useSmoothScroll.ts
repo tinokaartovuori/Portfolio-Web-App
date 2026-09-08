@@ -293,8 +293,20 @@ export function createSmoothScroll(content: HTMLElement): SmoothScroll {
       // there to here, so it leaves no velocity: read as motion, a jump
       // saturated every scroll-driven effect at once and the page arrived
       // with its images bent and trailing.
+      //
+      // Under a finger, or with the integrator at rest, any move at all is
+      // somebody else's: a slow finger scrolls the page less than the
+      // epsilon a frame, and the browser's own fling ends the same way, and
+      // writing the last written position back over each of those frames
+      // fought the browser for the page — a slow or careful touch scroll
+      // shook with every frame while a fast one, past the epsilon, was
+      // adopted and smooth. The epsilon is only for the integrator's own
+      // glide, where the browser reports its write rounded.
       const moved = actual - lastWritten
-      if (Math.abs(moved) > EXTERNAL_SCROLL_EPSILON) {
+      const external =
+        Math.abs(moved) > EXTERNAL_SCROLL_EPSILON ||
+        (moved !== 0 && (touching || scroll.settled))
+      if (external) {
         if (Math.abs(moved) > overscrollConfig.bounceMaxVelocity * dt) {
           previousY = actual
         }

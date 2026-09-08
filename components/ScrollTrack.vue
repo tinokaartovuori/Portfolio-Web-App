@@ -10,9 +10,14 @@
 
   The indicator has no height until the first frame publishes the page's
   length, so it fades in on the page's reveal envelope rather than appearing.
+
+  An Android WebView (DuckDuckGo, an in-app browser) draws its scrollbar as
+  the Android view's own, outside the page, which no CSS can hide; there the
+  page would show two, so this one stands down after mount.
 -->
 <template>
   <div
+    v-show="shown"
     ref="track"
     aria-hidden="true"
     class="group fixed bottom-0 right-0 top-0 z-40 w-4 touch-none select-none"
@@ -49,6 +54,18 @@ const track = ref<HTMLElement | null>(null)
 const indicator = ref<HTMLElement | null>(null)
 
 const { height: windowHeight } = useWindowSize()
+
+/*
+ * Off in an Android WebView, whose scrollbar cannot be hidden. A WebView's
+ * user agent carries `wv`, and a browser built on one (DuckDuckGo) the
+ * `Version/x` token Chrome itself does not have. Decided after mount, so the
+ * server and the hydrating client agree on the track being there.
+ */
+const shown = ref(true)
+const inWebView = () => {
+  const ua = navigator.userAgent
+  return /Android/.test(ua) && /\bwv\b|Version\/\d|DuckDuckGo/.test(ua)
+}
 
 // Cached so the per frame update only has to write the indicator position
 let trackHeight = 0
@@ -152,6 +169,7 @@ const onPointerEnd = (event: PointerEvent) => {
 
 onMounted(() => {
   startPageReveal()
+  if (inWebView()) shown.value = false
   updateIndicatorHeight()
   updateIndicatorPosition()
   // Runs in the shared frame loop's render stage, after scroll has advanced
