@@ -28,9 +28,10 @@
       ]"
     ></div>
     <!--
-      A deeper wash for when the top bar has a menu open over the page: solid
-      to below the open stack, then feathered. Its own layer, faded in and
-      out, because a mask cannot be transitioned.
+      A deeper wash for when the top bar has a menu open over the page: from
+      the top-right corner the stack fans out from, solid past the stack and
+      feathered down the page and across toward the name. Its own layer,
+      faded in and out, because a mask cannot be transitioned.
     -->
     <div
       v-if="edge === 'top'"

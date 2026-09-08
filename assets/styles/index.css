@@ -177,19 +177,33 @@ html {
   );
 }
 
-/* Under an open menu (TopBar on a portrait phone): solid past the stack,
- * then the same long feather, so the fanned-out controls sit on the page
- * colour and nothing reads through them. */
+/* Under an open menu (TopBar on a portrait phone): a wash from the top-right
+ * corner, where the stack fans out from. Solid past the stack and to its
+ * left edge, then the long feather on both sides — down the page and across
+ * toward the name — so the fanned-out controls sit on the page colour and
+ * nothing reads through them, while the shade reads as coming from the
+ * corner rather than a band across the top. The two gradients are
+ * intersected: where either one is faded, the shade is. */
 .bar-shade {
   height: calc(var(--bar-safe) + 10rem);
-  mask-image: linear-gradient(
-    to bottom,
-    rgb(0 0 0 / 1) 0%,
-    rgb(0 0 0 / 1) 65%,
-    rgb(0 0 0 / 0.6) 80%,
-    rgb(0 0 0 / 0.2) 92%,
-    transparent 100%
-  );
+  mask-image:
+    linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 65%,
+      rgb(0 0 0 / 0.6) 80%,
+      rgb(0 0 0 / 0.2) 92%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to left,
+      rgb(0 0 0 / 1) 0%,
+      rgb(0 0 0 / 1) 38%,
+      rgb(0 0 0 / 0.6) 56%,
+      rgb(0 0 0 / 0.2) 76%,
+      transparent 92%
+    );
+  mask-composite: intersect;
 }
 
 .bar-veil-on {
