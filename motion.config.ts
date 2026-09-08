@@ -560,6 +560,14 @@ export const motion = {
     parallax: 0.2,
   },
 
+  /** The fixed bars (Bar.vue). */
+  bar: {
+    /** Scrolled this many px, the top bar has left the hero: the veil comes
+     * on, the bar slides to its compact offset and a phone's stack folds.
+     * Nearly at once, so the page reads as scrolled from the first move. */
+    scrolledAt: 32,
+  },
+
   /** The scroll prompt in the bottom bar (BottomBar.vue). */
   scrollPrompt: {
     /** Gone once the page has scrolled this many px: it is an invitation,

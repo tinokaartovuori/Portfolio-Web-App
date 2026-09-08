@@ -18,7 +18,6 @@
       the page, and stays off while the bar is over the hero (see below).
     -->
     <div
-      ref="veilElement"
       aria-hidden="true"
       class="bar-veil absolute inset-x-0"
       :class="[
@@ -49,10 +48,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, provide } from 'vue'
-import { useElementBounding, useWindowSize } from '@vueuse/core'
+import { useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useScrollStateStore } from '~/store/scrollState'
 import { BAR_PAST_HERO } from '~/composables/useBar'
+import { motion } from '~/motion.config'
 
 const emit = defineEmits<{
   /** Whether the bar has left the hero; TopBar folds its controls on it. */
@@ -81,29 +81,23 @@ const props = withDefaults(
   },
 )
 
-const veilElement = ref<HTMLElement | null>(null)
-// The bar is fixed, so its box only changes with the viewport, never with
-// scrolling; skip the per-scroll-event updates
-const { bottom: veilBottom } = useElementBounding(veilElement, {
-  windowScroll: false,
-})
 const { height: viewportHeight } = useWindowSize()
 
 const { scrollY, heroHeight } = storeToRefs(useScrollStateStore())
 
 /*
- * The hero view stays clean: no veil while the bar is over the hero. The top
- * veil waits until the hero has scrolled up past the veil's bottom edge, so it
- * fades in as the first content passes under the bar; the bottom veil only
- * has to wait for the hero's bottom edge to leave the viewport, which is the
- * moment scrolling starts. A page without a hero has both on from the start.
+ * The hero view stays clean: no veil while the bar is over the hero, which
+ * for the top bar means the page at rest. A few px of scroll and it has left
+ * (`bar.scrolledAt`): the veil comes on and the bar compacts as soon as the
+ * page starts moving rather than once the hero has passed under it, which
+ * on a tall hero was a screen later. The bottom bar waits for the hero's
+ * bottom edge to leave the viewport, which is also the moment scrolling
+ * starts. A page without a hero has both on from the start.
  */
 const overHero = computed(() => {
   if (heroHeight.value === 0) return false
-  const heroBottom = heroHeight.value - scrollY.value
-  const threshold =
-    props.edge === 'top' ? veilBottom.value : viewportHeight.value - 1
-  return heroBottom > threshold
+  if (props.edge === 'top') return scrollY.value < motion.bar.scrolledAt
+  return heroHeight.value - scrollY.value > viewportHeight.value - 1
 })
 
 /*
