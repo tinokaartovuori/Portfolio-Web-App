@@ -4,12 +4,21 @@ standfirst: I am an engineer in Finland. I build software and hardware, and I re
 image: /images/portrait.jpg
 imageAlt: Tino Kaartovuori, smiling, in low evening light
 
-# Where I am, where I work and what I take on. The English paragraph is shown
-# after the prose; the Finnish one is not on the page but goes, with the rest
-# of these facts, into the structured data (JSON-LD) and llms.txt, so a search
-# for a developer in Turku or Helsinki — by a person or by an AI, in either
-# language — finds this page.
+# Where I am, what I studied, where I work and what I take on. The English
+# paragraph is shown after the prose; the Finnish one is not on the page but
+# goes, with the rest of these facts, into the structured data (JSON-LD) and
+# llms.txt, so a search for a developer in Turku or Helsinki — by a person or
+# by an AI, in either language — finds this page.
 jobTitle: Software engineer
+# The degree, as the structured data and llms.txt state it; the paragraph
+# below says the same in prose, which is the only place it shows on the page.
+education:
+  degree: Master of Science (Technology)
+  field: Information Technology
+  major: Software Engineering
+  school: Tampere University
+  schoolUrl: https://www.tuni.fi/en
+  year: '2025'
 location:
   city: Salo
   region: Southwest Finland
@@ -20,8 +29,8 @@ areaServed:
   - Turku
   - Helsinki
 availability:
-  en: I am based in Salo, an hour from both Turku and Helsinki, and take on projects and roles in both cities and across southern Finland, on site or remote.
-  fi: Olen ohjelmistoinsinööri Salosta. Teen töitä Turun ja Helsingin seudulla sekä muualla Etelä-Suomessa, paikan päällä tai etänä, ja otan vastaan sekä projekteja että vakituisia tehtäviä.
+  en: I hold a Master of Science (Technology) in Information Technology from Tampere University, with software engineering as my major. I am based in Salo, an hour from both Turku and Helsinki, and take on projects and roles in both cities and across southern Finland, on site or remote.
+  fi: Olen tietotekniikan diplomi-insinööri Tampereen yliopistosta, pääaineena ohjelmistotekniikka, ja asun Salossa. Teen töitä Turun ja Helsingin seudulla sekä muualla Etelä-Suomessa, paikan päällä tai etänä, ja otan vastaan sekä projekteja että vakituisia tehtäviä.
 
 # What search engines and AI list as known, beyond the marquee's tools.
 skills:

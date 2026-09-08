@@ -47,6 +47,13 @@ export default defineEventHandler(async (event) => {
     lines.push('## About')
     lines.push('')
     lines.push(`Occupation: ${about.jobTitle}`)
+    const { education } = about
+    lines.push(
+      `Education: ${education.degree} in ${education.field}` +
+        (education.major ? ` (major: ${education.major})` : '') +
+        `, ${education.school}` +
+        (education.year ? `, ${education.year}` : ''),
+    )
     lines.push(
       `Location: ${location.city}, ${location.region}, ${location.country}`,
     )

@@ -389,9 +389,10 @@ useSeo({
 
 // The site's identity: a WebSite and a Person, the Person referenced by @id
 // from every project page's JSON-LD. The Person carries the place (address,
-// occupation and where it is practised), the languages, the skills and the
-// offer as Services with the area they are served in — the facts an answer
-// engine needs to match "a developer in Turku" to this page.
+// occupation and where it is practised), the degree and the school, the
+// languages, the skills and the offer as Services with the area they are
+// served in — the facts an answer engine needs to match "a developer in
+// Turku" to this page.
 const contact = computed(() => home.value?.contact)
 const socials = computed(() =>
   (contact.value?.links ?? []).map((l) => l.to).filter(Boolean),
@@ -401,6 +402,14 @@ const cities = (about.value?.areaServed ?? []).map((name) => ({
   '@type': 'City',
   name,
 }))
+const education = about.value?.education
+const school = education
+  ? {
+      '@type': 'CollegeOrUniversity',
+      name: education.school,
+      url: education.schoolUrl,
+    }
+  : undefined
 const offers = (about.value?.offers ?? []).map((offer) => {
   const [name = offer, ...rest] = offer.split(':')
   return {
@@ -460,6 +469,18 @@ useJsonLd([
           '@type': 'Occupation',
           name: about.value.jobTitle,
           occupationLocation: cities,
+        }
+      : undefined,
+    alumniOf: school,
+    hasCredential: education
+      ? {
+          '@type': 'EducationalOccupationalCredential',
+          credentialCategory: 'degree',
+          educationalLevel: "Master's degree",
+          name: `${education.degree} in ${education.field}`,
+          about: education.major,
+          recognizedBy: school,
+          dateCreated: education.year,
         }
       : undefined,
     knowsLanguage: ['fi', 'en'],

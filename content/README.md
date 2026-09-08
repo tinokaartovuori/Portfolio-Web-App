@@ -135,10 +135,12 @@ unavailable, the page is still a working portfolio with its photographs.
 
 The frontmatter of `about.md` carries the facts that search engines and AI
 answer engines match on when someone asks for a developer in a given place:
-`jobTitle`, `location`, `areaServed` (the cities), an `availability`
-paragraph in English and in Finnish, `skills` and the `offers` list. The
-English paragraph and the offers are shown after the prose in the about
-section; the Finnish paragraph is not on the page at all (a search engine
+`jobTitle`, `education` (the degree, the programme, the major, the school
+and the year), `location`, `areaServed` (the cities), an `availability` paragraph
+in English and in Finnish, `skills` and the `offers` list. The English
+paragraph and the offers are shown after the prose in the about section; the
+degree is on the page only as the paragraph's first sentence, so if the
+`education` fields change, change the sentence too; the Finnish paragraph is not on the page at all (a search engine
 treats hidden text as spam) but goes, with all of these fields, into the
 page's structured data and into `/llms.txt`, the plain-text brief for AI
 crawlers, where a Finnish search finds it. Keep them in agreement with the

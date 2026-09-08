@@ -154,6 +154,18 @@ export default defineContentConfig({
         imageAlt: z.string(),
         /** The occupation, as a search engine names it. */
         jobTitle: z.string(),
+        /** The degree: its name, the programme, the major and the school,
+         * for the Person's credential in the structured data. On the page
+         * it is a sentence of the availability paragraph. */
+        education: z.object({
+          degree: z.string(),
+          field: z.string(),
+          major: z.string().optional(),
+          school: z.string(),
+          schoolUrl: z.string().optional(),
+          /** The year of graduation, quoted, for the credential's date. */
+          year: z.string().optional(),
+        }),
         /** Where I am: the Person's postal address in the structured data. */
         location: z.object({
           city: z.string(),
@@ -164,8 +176,9 @@ export default defineContentConfig({
         }),
         /** The cities the work is offered in. */
         areaServed: z.array(z.string()),
-        /** One paragraph on where I work and what I take on, in English and
-         * in Finnish: the Finnish one is what a Finnish search finds. */
+        /** One paragraph on the degree, where I work and what I take on, in
+         * English and in Finnish: the Finnish one is what a Finnish search
+         * finds. */
         availability: z.object({ en: z.string(), fi: z.string() }),
         /** What the structured data lists as known, beyond the marquee. */
         skills: z.array(z.string()),
