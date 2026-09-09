@@ -372,9 +372,7 @@ export default class WavyImage
    * the browser choosing another candidate (a resize across a `sizes` step).
    */
   private requestTexture() {
-    this.entry = acquireTexture(this.imageElement, (entry) => {
-      if (entry === this.entry) this.pendingTexture = entry
-    })
+    this.takeTexture()
     this.imageElement.addEventListener('load', this.onImgLoad)
   }
 
@@ -382,10 +380,26 @@ export default class WavyImage
     if (!this.entry || textureKeyFor(this.imageElement) === this.entry.key)
       return
     const previous = this.entry
-    this.entry = acquireTexture(this.imageElement, (entry) => {
-      if (entry === this.entry) this.pendingTexture = entry
-    })
+    this.takeTexture()
     releaseTexture(previous)
+  }
+
+  /**
+   * Takes a reference to the cache's texture for the `<img>` and has it
+   * attached once it is ready. A texture that is ready already — the cache
+   * keeps them across rebuilds and navigations, so a photograph seen once
+   * is — fires the callback synchronously, inside `acquireTexture`, before
+   * the entry has been assigned to `this.entry`; the callback's identity
+   * check cannot pass then, so the ready case is handled after the
+   * assignment instead. (Every image on a page returned to was stuck on its
+   * `<img>` for want of this, with no mesh to trail or lens.)
+   */
+  private takeTexture() {
+    const entry = acquireTexture(this.imageElement, (ready) => {
+      if (ready === this.entry) this.pendingTexture = ready
+    })
+    this.entry = entry
+    if (entry.ready) this.pendingTexture = entry
   }
 
   /** The texture is uploaded: sample it, crop it right, and draw. */

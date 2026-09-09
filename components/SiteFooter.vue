@@ -6,11 +6,19 @@
     the top bar's "Contact" lands: the anchor puts the panel's top edge at
     --bar-safe + 2rem (scroll-margin-top covers what the padding does not),
     so the padding is the gap to the section above and nothing else.
+
+    On a phone (below sm) the panel sits where the hero's plate does: the
+    hero is a full-width section with its plate drawn `inset` px inside it
+    and its text at the page gutter, so the footer keeps the same inset as
+    its side padding and the panel pads its text the rest of the way to the
+    gutter, and the two plates and their first lines share one edge. From
+    sm the panel stands inside the gutter like the sections between.
   -->
   <footer
     v-if="contact"
     id="contact"
-    class="w-full scroll-mt-[calc(var(--bar-safe)_-_2rem)] px-(--page-gutter) pb-10 pt-16 text-onyx md:scroll-mt-[calc(var(--bar-safe)_-_4rem)] md:pb-14 md:pt-24"
+    class="w-full scroll-mt-[calc(var(--bar-safe)_-_2rem)] px-(--plate-inset) pb-10 pt-16 text-onyx sm:px-(--page-gutter) md:scroll-mt-[calc(var(--bar-safe)_-_4rem)] md:pb-14 md:pt-24"
+    :style="{ '--plate-inset': `${heroInset}px` }"
   >
     <ElementTracker
       threeReference="footer-lights"
@@ -19,7 +27,7 @@
     >
       <div
         ref="panel"
-        class="relative isolate flex flex-col items-start px-[6vw] py-20 will-change-transform sm:px-(--page-gutter) md:py-28"
+        class="relative isolate flex flex-col items-start px-[calc(var(--page-gutter)_-_var(--plate-inset))] py-20 will-change-transform sm:px-(--page-gutter) md:py-28"
       >
         <!-- The plate from the first frame; see the hero in pages/index.vue -->
         <div
@@ -103,6 +111,10 @@ import { motion } from '~/motion.config'
 // The panel rides the page trail; its light field follows by measuring it
 const panel = ref<HTMLElement | null>(null)
 useTrail(panel, motion.trail.footer)
+
+// How far inside its box the hero's plate is drawn: on a phone the footer's
+// side padding, so its panel's plate lands on the hero's edge (the template)
+const heroInset = motion.lightField.presets.hero.inset
 
 // The same query the home page makes, so the two share one payload
 const { data: home } = await useHomeContent()
